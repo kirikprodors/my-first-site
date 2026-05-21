@@ -115,7 +115,7 @@
         .chat-item:hover .delete-chat-btn { display: block; }
 
         #main-chat { flex: 1; display: flex; flex-direction: column; background: #17212b; }
-        #chat-header { padding: 15px 20px; background: #212121; font-weight: bold; border-bottom: 1px solid #2f2f2f; }
+        #chat-header { padding: 15px 20px; background: #212121; font-weight: bold; border-bottom: 1px solid #2f2f2f; color: #5288c1; }
         #messages-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
 
         .chat-placeholder { display: flex; justify-content: center; align-items: center; height: 100%; color: #777; }
@@ -130,10 +130,14 @@
             cursor: pointer;
             position: relative;
             transition: opacity 0.2s;
+            display: flex;
+            flex-direction: column;
         }
         .message:hover { filter: brightness(1.2); }
         .msg-inbound { background: #182533; align-self: flex-start; }
         .msg-outbound { background: #2b5278; align-self: flex-end; }
+        .msg-author { font-size: 11px; color: #5288c1; font-weight: bold; margin-bottom: 4px; }
+        .msg-outbound .msg-author { color: #8ec3ff; }
 
         #input-panel { padding: 15px; background: #212121; display: flex; gap: 10px; align-items: center; }
         #message-input { flex: 1; padding: 12px; background: #181818; border: 1px solid #2f2f2f; border-radius: 8px; color: white; outline: none; }
@@ -285,7 +289,6 @@
 
     let currentUser = "";
     let currentChat = "";
-    let activeChats = {}; 
     let hiddenChats = JSON.parse(localStorage.getItem("kirikgram_hidden_chats") || "[]");
     let currentRoomRef = null;
     let globalRoomsListener = null;
@@ -324,7 +327,6 @@
 
             let userData = snapshot.val();
 
-            // Жестко проверяем, админ ли текущий пользователь по флагу role
             if (userData.role === "admin" || currentUser === "KIRIK") {
                 amIAdmin = true;
                 document.getElementById("admin-panel-btn").style.display = "block";
@@ -383,7 +385,6 @@
             if (snapshot.exists()) {
                 errorDiv.innerText = "Это имя уже занято!";
             } else {
-                // По умолчанию все обычные пользователи (user), а KIRIK автоматически admin
                 let defaultRole = (name === "KIRIK") ? "admin" : "user";
                 set(ref(db, 'users/' + name), { 
                     password: pass, 
@@ -405,7 +406,6 @@
             if (snapshot.exists()) {
                 let uData = snapshot.val();
                 if (uData.password === pass) {
-                    // Страховка: если KIRIK заходит, гарантируем ему админку
                     if(name === "KIRIK" && uData.role !== "admin") {
                         update(ref(db, 'users/KIRIK'), { role: "admin" });
                     }
@@ -432,7 +432,6 @@
     }
 
     function resetChatUI() {
-        activeChats = {};
         currentChat = "";
         document.getElementById("chat-list").innerHTML = `<div class="no-chats-msg" id="empty-notice">You don't have a chat history...</div>`;
         document.getElementById("chat-view-placeholder").style.display = "flex";
@@ -469,6 +468,12 @@
             if (!snapshot.exists()) { resetChatUI(); return; }
             
             const allRooms = snapshot.val();
+            // Чистим старый список перед перерисовкой
+            let list = document.getElementById("chat-list");
+            list.innerHTML = "";
+
+            let hasChats = false;
+
             for (let roomId in allRooms) {
                 if (roomId.includes(currentUser)) {
                     let parts = roomId.split("_");
@@ -486,8 +491,13 @@
                         unreadCount = messages.filter(([id, m]) => m.sender === partner).length; 
                     }
 
+                    hasChats = true;
                     updateChatUI(partner, lastMessageObj.text, unreadCount);
                 }
+            }
+
+            if (!hasChats) {
+                list.innerHTML = `<div class="no-chats-msg" id="empty-notice">You don't have a chat history...</div>`;
             }
         });
     }
@@ -501,7 +511,7 @@
 
         if (!existingItem) {
             let chatItem = document.createElement("div");
-            chatItem.className = "chat-item";
+            chatItem.className = "chat-item" + (partner === currentChat ? " active" : "");
             chatItem.id = "chat-item-" + partner;
             
             chatItem.innerHTML = `
@@ -545,7 +555,7 @@
         currentChat = chatName;
         document.getElementById("chat-view-placeholder").style.display = "none";
         document.getElementById("chat-view-active").style.display = "flex";
-        document.getElementById("chat-header").innerText = "Чат: " + chatName;
+        document.getElementById("chat-header").innerText = "Чат с: " + chatName;
         
         let badge = document.getElementById("badge-" + chatName);
         if (badge) badge.style.display = "none";
@@ -557,6 +567,7 @@
         
         document.getElementById("messages-area").innerHTML = "";
 
+        // Строгий алфавитный порядок генерации Room ID: "111_KIRIK"
         let roomId = currentUser < currentChat ? currentUser + "_" + currentChat : currentChat + "_" + currentUser;
         currentRoomRef = ref(db, 'messages/' + roomId);
 
@@ -573,9 +584,20 @@
         if (deletedLocally) return;
 
         let msgDiv = document.createElement("div");
-        msgDiv.className = msgObj.sender === currentUser ? "message msg-outbound" : "message msg-inbound";
+        
+        // Исправлено: Сравниваем КТО отправил сообщение с ТЕМ, кто сейчас авторизован в браузере
+        if (msgObj.sender === currentUser) {
+            msgDiv.className = "message msg-outbound"; // Улетает вправо (синее)
+        } else {
+            msgDiv.className = "message msg-inbound"; // Улетает влево (серое)
+        }
+        
         msgDiv.id = "msg-" + msgId;
-        msgDiv.innerText = msgObj.sender + ": " + msgObj.text;
+        msgDiv.innerHTML = `
+            <span class="msg-author">${msgObj.sender}</span>
+            <span>${msgObj.text}</span>
+        `;
+        
         msgDiv.onclick = () => openMessageOptions(msgId, msgObj.sender);
 
         area.appendChild(msgDiv);
@@ -685,20 +707,17 @@
 
                 listContainer.appendChild(item);
 
-                // ФУНКЦИЯ «СДЕЛАТЬ АДМИНОМ»
                 document.getElementById(`role-btn-${username}`).onclick = () => {
                     let newRole = isUserAdmin ? "user" : "admin";
                     let confirmText = isUserAdmin ? `Снять права администратора с ${username}?` : `Сделать пользователя ${username} администратором?`;
                     
                     if(confirm(confirmText)) {
                         update(ref(db, `users/${username}`), { role: newRole }).then(() => {
-                            // Перезагружаем список в админке
                             document.getElementById("admin-panel-btn").click();
                         });
                     }
                 };
 
-                // ИСПРАВЛЕННЫЙ БАН (через update, не стирает пароли)
                 document.getElementById(`ban-btn-${username}`).onclick = () => {
                     let reason = document.getElementById("admin-reason-input").value.trim() || "Нарушение правил проекта";
                     let days = parseInt(document.getElementById("admin-time-input").value) || 1;
@@ -717,7 +736,6 @@
                     }
                 };
 
-                // ИСПРАВЛЕННЫЙ МУТ (через update)
                 document.getElementById(`mute-btn-${username}`).onclick = () => {
                     let reason = document.getElementById("admin-reason-input").value.trim() || "Флуд / Спам";
                     let minutes = parseInt(document.getElementById("admin-time-input").value) || 5;
@@ -754,7 +772,6 @@
         document.getElementById("confirm-modal").style.display = "none";
     }
 
-    // Привязка кнопок
     document.getElementById("reg-btn").onclick = handleRegister;
     document.getElementById("login-btn").onclick = handleLogin;
     document.getElementById("search-btn").onclick = handleSearch;
