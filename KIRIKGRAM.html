@@ -4,39 +4,41 @@
     <meta charset="UTF-8">
     <title>KIRIKGRAM</title>
     <style>
-        body { background-color: #1c1c1c; color: white; font-family: sans-serif; display: flex; justify-content: center; }
-        #chat-window { width: 400px; height: 500px; background: #2b2b2b; border-radius: 15px; display: flex; flex-direction: column; overflow: hidden; }
-        #messages { flex: 1; padding: 20px; overflow-y: auto; }
+        body { background-color: #1c1c1c; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+        h1 { margin-top: 20px; color: #0088cc; }
+        #chat-window { width: 350px; height: 400px; background: #2b2b2b; border-radius: 15px; display: flex; flex-direction: column; overflow: hidden; margin-top: 10px; }
+        #messages { flex: 1; padding: 15px; overflow-y: auto; }
         #input-area { display: flex; padding: 10px; background: #333; }
-        input { flex: 1; padding: 10px; border: none; border-radius: 5px; }
-        button { padding: 10px; margin-left: 5px; background: #0088cc; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        .msg { background: #444; padding: 8px; margin-bottom: 10px; border-radius: 10px; }
+        input { flex: 1; padding: 8px; border: none; border-radius: 5px; }
+        button { padding: 8px 15px; margin-left: 5px; background: #0088cc; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .msg { background: #444; padding: 8px; margin-bottom: 8px; border-radius: 8px; font-size: 14px; }
     </style>
 </head>
 <body>
 
-<div id="chat-window">
-    <div id="messages"></div>
-    <div id="input-area">
-        <input type="text" id="msgInput" placeholder="Напиши сообщение...">
-        <button onclick="sendMessage()">Send</button>
+    <h1>КИРИКГРАМ</h1>
+
+    <div id="chat-window">
+        <div id="messages"></div>
+        <div id="input-area">
+            <input type="text" id="msgInput" placeholder="Сообщение...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
     </div>
-</div>
 
-<script>
-    function sendMessage() {
-        let input = document.getElementById("msgInput");
-        let msgBox = document.getElementById("messages");
-        if (input.value !== "") {
-            let newMsg = document.createElement("div");
-            newMsg.className = "msg";
-            newMsg.innerText = "Кирилл: " + input.value;
-            msgBox.appendChild(newMsg);
-            input.value = "";
-            msgBox.scrollTop = msgBox.scrollHeight;
+    <script>
+        function sendMessage() {
+            let input = document.getElementById("msgInput");
+            let msgBox = document.getElementById("messages");
+            if (input.value.trim() !== "") {
+                let newMsg = document.createElement("div");
+                newMsg.className = "msg";
+                newMsg.innerText = "Кирилл: " + input.value;
+                msgBox.appendChild(newMsg);
+                input.value = "";
+                msgBox.scrollTop = msgBox.scrollHeight;
+            }
         }
-    }
-</script>
-
+    </script>
 </body>
 </html>
