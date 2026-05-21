@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>KIRIKGRAM Pro</title>
+    <title>KIRIKGRAM Ultra Pro</title>
     <style>
         body { 
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
@@ -69,8 +69,8 @@
         /* ИНТЕРФЕЙС ЧАТА */
         #telegram-container { 
             display: none; 
-            width: 900px; 
-            height: 650px; 
+            width: 950px; 
+            height: 680px; 
             background: rgba(15, 23, 42, 0.6);
             backdrop-filter: blur(12px);
             border-radius: 16px; 
@@ -80,7 +80,7 @@
         }
 
         #side-panel { 
-            width: 320px; 
+            width: 340px; 
             background: #111827; 
             border-right: 1px solid #1f2937; 
             display: flex; 
@@ -150,7 +150,14 @@
         .chat-item:hover { background: #1f2937; }
         .chat-item.active { background: #2563eb; }
         
-        .chat-item-avatar { width: 40px; height: 40px; border-radius: 50%; background: #374151; display: flex; justify-content: center; align-items: center; font-size: 20px; }
+        .avatar-container { position: relative; width: 42px; height: 42px; flex-shrink: 0; }
+        .avatar-img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; background: #374151; display: flex; justify-content: center; align-items: center; font-size: 20px; }
+        
+        /* ИНДИКАТОР СЕТИ */
+        .status-dot { width: 11px; height: 11px; border-radius: 50%; position: absolute; bottom: 0; right: 0; border: 2px solid #111827; }
+        .status-online { background-color: #10b981; }
+        .status-offline { background-color: #9ca3af; }
+
         .chat-item-info { flex: 1; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
         .chat-item-name { font-weight: bold; font-size: 15px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .chat-item-lastmsg { font-size: 13px; color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -195,20 +202,8 @@
         .msg-row-inbound { align-self: flex-start; flex-direction: row; }
         .msg-row-outbound { align-self: flex-end; flex-direction: row-reverse; }
 
-        .msg-user-avatar { 
-            width: 34px; 
-            height: 34px; 
-            border-radius: 50%; 
-            background: #1f2937; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            font-size: 18px; 
-            cursor: pointer; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            flex-shrink: 0;
-        }
-        .msg-user-avatar:hover { transform: scale(1.05); }
+        .msg-user-avatar-click { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: #1f2937; display: flex; justify-content: center; align-items: center; font-size: 18px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3); flex-shrink: 0; }
+        .msg-user-avatar-click:hover { transform: scale(1.05); }
 
         .message-bubble { 
             padding: 10px 14px; 
@@ -232,11 +227,11 @@
         #send-btn { padding: 12px 24px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
         #mute-status-text { color: #f87171; font-size: 14px; display: none; width: 100%; text-align: center; font-weight: bold; }
 
-        /* МОДАЛКИ (СТАНДАРТНЫЕ И ПРОФИЛИ) */
+        /* МОДАЛКИ */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 10; }
         .modal-content { background: #1e293b; padding: 25px; border-radius: 12px; text-align: center; width: 300px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 15px 35px rgba(0,0,0,0.5); }
         .modal-btns { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; }
-        .modal-btn { padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; }
+        .modal-btn { padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; text-align: center; }
         
         .btn-danger { background: #ef4444; }
         .btn-warning { background: #f59e0b; }
@@ -254,13 +249,12 @@
         .settings-input:focus { border-color: #3b82f6; }
 
         /* КАРТОЧКА ПРОФИЛЯ ЮЗЕРА */
-        #profile-modal .profile-avatar-big { width: 70px; height: 70px; border-radius: 50%; background: #374151; display: flex; justify-content: center; align-items: center; font-size: 40px; margin: 0 auto 12px auto; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
-        #profile-modal h3 { margin: 0 0 5px 0; color: white; font-size: 20px; }
-        #profile-modal p { margin: 4px 0; font-size: 14px; color: #9ca3af; }
+        #profile-modal .profile-avatar-big { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; background: #374151; display: flex; justify-content: center; align-items: center; font-size: 40px; margin: 0 auto 12px auto; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+        #profile-modal h3 { margin: 0 0 5px 0; color: white; font-size: 20px; text-align: center; }
+        #profile-modal p { margin: 4px 0; font-size: 14px; color: #9ca3af; text-align: left; }
 
         /* ЗАЯВКИ В ДРУЗЬЯ В НАСТРОЙКАХ */
         .req-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #1f2937; font-size: 13px; }
-        .req-item:last-child { border-bottom: none; }
 
         /* ОКНО ЭКРАНА БАНА */
         #banned-screen { background: #1e293b; padding: 40px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.6); width: 360px; text-align: center; display: none; border: 1px solid rgba(239,68,68,0.2); }
@@ -268,8 +262,8 @@
         #banned-details { background: #111827; border: 1px solid #374151; padding: 15px; border-radius: 8px; text-align: left; font-size: 14px; margin: 15px 0; line-height: 1.5; }
 
         /* ОКНО АДМИНКИ */
-        #admin-modal .modal-content { width: 520px; max-height: 80vh; overflow-y: auto; text-align: left; }
-        .admin-user-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #374151; }
+        #admin-modal .modal-content { width: 550px; max-height: 80vh; overflow-y: auto; text-align: left; }
+        .admin-user-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #374151; gap: 10px; }
         .admin-actions-group { display: flex; gap: 4px; }
         
         @keyframes pulse {
@@ -366,12 +360,13 @@
                 <input type="text" id="set-display-name" class="settings-input" placeholder="Как вас увидят другие">
             </div>
             <div class="settings-row">
-                <label>Аватарка (Любой эмодзи)</label>
-                <input type="text" id="set-avatar" class="settings-input" placeholder="Например: ⚔️, 🦊, 🎮, 🚀" maxlength="4">
+                <label>Загрузить фото профиля (Аватарку)</label>
+                <input type="file" id="set-avatar-file" accept="image/*" style="font-size:12px; color:#9ca3af; margin-top:4px;">
+                <div id="avatar-preview-text" style="font-size:11px; color:#10b981; margin-top:2px; display:none;">Картинка готова к сохранению!</div>
             </div>
             <div class="settings-row">
                 <label>Страна</label>
-                <input type="text" id="set-country" class="settings-input" placeholder="Например: Россия, Украина">
+                <input type="text" id="set-country" class="settings-input" placeholder="Например: Россия, Казахстан">
             </div>
             <div style="display:flex; align-items:center; gap:6px; margin-top:5px;">
                 <input type="checkbox" id="set-country-visible" checked>
@@ -395,11 +390,12 @@
 
 <div id="profile-modal" class="modal">
     <div class="modal-content">
-        <div class="profile-avatar-big" id="prof-view-avatar">👤</div>
+        <div id="prof-view-avatar-box"></div>
         <h3 id="prof-view-name">...</h3>
-        <p id="prof-view-username" style="font-size:12px; color:#6b7280; margin-bottom:12px;">@username</p>
+        <p id="prof-view-username" style="font-size:12px; color:#6b7280; margin-bottom:12px; text-align:center;">@username</p>
+        <p><b>Статус сети:</b> <span id="prof-view-online-status">...</span></p>
         <p><b>Страна:</b> <span id="prof-view-country">...</span></p>
-        <p><b>Статус:</b> <span id="prof-view-status">...</span></p>
+        <p><b>Роль:</b> <span id="prof-view-status">...</span></p>
         <button class="modal-btn btn-secondary" style="width:100%; margin-top:15px;" id="close-profile-btn">Закрыть</button>
     </div>
 </div>
@@ -424,10 +420,13 @@
 <div id="admin-modal" class="modal">
     <div class="modal-content">
         <h3 style="margin-top:0; color:#3b82f6;">Панель Администратора</h3>
-        <div style="background:#111827; padding: 10px; border-radius: 8px; margin-bottom: 10px; border:1px solid #374151;">
-            <span style="font-size: 13px; color:#9ca3af;">0 или пусто = Навсегда</span>
-            <input type="text" id="admin-reason-input" class="admin-input-small" placeholder="Причина наказания">
-            <input type="number" id="admin-time-input" class="admin-input-small" placeholder="Время (Дни для бана, Минуты для мута)" value="1">
+        <div style="background:#111827; padding: 12px; border-radius: 8px; margin-bottom: 10px; border:1px solid #374151; display:flex; flex-direction:column; gap:8px;">
+            <input type="text" id="admin-search-input" class="settings-input" placeholder="🔍 Умный поиск пользователей...">
+            <div style="display:flex; gap:6px;">
+                <input type="text" id="admin-reason-input" class="settings-input" placeholder="Причина наказания" style="flex:1;">
+                <input type="number" id="admin-time-input" class="settings-input" placeholder="Время (дн/мин)" value="1" style="width:90px;">
+            </div>
+            <span style="font-size: 11px; color:#9ca3af;">0 или пусто = Навсегда</span>
         </div>
         <div id="admin-users-list" style="max-height: 230px; overflow-y:auto; margin-bottom: 15px;"></div>
         <button class="modal-btn btn-secondary" style="width:100%" id="close-admin-btn">Закрыть</button>
@@ -436,7 +435,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-    import { getDatabase, ref, set, update, get, remove, push, onChildAdded, onChildRemoved, off, onValue } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
+    import { getDatabase, ref, set, update, get, remove, push, onChildAdded, onChildRemoved, off, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyB86-UBtg14ECIK7rpUcYf3dwK4rBCcDiw",
@@ -454,17 +453,23 @@
     let currentUser = "";
     let currentChat = "";
     let hiddenChats = JSON.parse(localStorage.getItem("kirikgram_hidden_chats") || "[]");
+    
+    // ПАМЯТЬ ДЛЯ ОТКРЫТЫХ ЧАТОВ (Чтобы не пропадали после перезагрузки)
+    let activePartners = JSON.parse(localStorage.getItem(`kirikgram_active_partners_${localStorage.getItem("kirikgram_logged_user")}`) || "[]");
+
     let currentRoomRef = null;
     let globalRoomsListener = null;
     let userStatusListener = null;
     let selectedMsgId = null;
     let amIAdmin = false;
     let allUsersCache = {}; 
+    let base64AvatarStr = ""; 
 
     window.addEventListener('DOMContentLoaded', () => {
         let savedUser = localStorage.getItem("kirikgram_logged_user");
         if (savedUser) {
             currentUser = savedUser;
+            activePartners = JSON.parse(localStorage.getItem(`kirikgram_active_partners_${currentUser}`) || "[]");
             checkBanAndStart();
         } else {
             showScreen('register-screen');
@@ -510,6 +515,11 @@
             }
 
             checkMuteStatus(userData.mutedUntil, userData.muteReason);
+            
+            // СТАТУС В СЕТИ И АВТОМАТИЧЕСКИЙ ВЫХОД ИЗ СЕТИ ПРИ ЗАКРЫТИИ ВКЛАДКИ
+            update(ref(db, `users/${currentUser}`), { status: "online" });
+            onDisconnect(ref(db, `users/${currentUser}/status`)).set("offline");
+
             if (document.getElementById("telegram-container").style.display !== "flex" && document.getElementById("banned-screen").style.display !== "block") {
                 startChatSystem();
             }
@@ -551,7 +561,7 @@
                 let defaultRole = (name === "KIRIK") ? "admin" : "user";
                 set(ref(db, 'users/' + name), { 
                     password: pass, banned: false, role: defaultRole,
-                    avatar: "👤", displayName: name, country: "", countryVisible: true
+                    avatar: "👤", displayName: name, country: "", countryVisible: true, status: "online"
                 }).then(() => { saveUserAndLogin(name); });
             }
         });
@@ -574,6 +584,7 @@
     function saveUserAndLogin(name) {
         currentUser = name;
         localStorage.setItem("kirikgram_logged_user", name);
+        activePartners = JSON.parse(localStorage.getItem(`kirikgram_active_partners_${currentUser}`) || "[]");
         checkBanAndStart();
     }
 
@@ -590,15 +601,14 @@
         document.getElementById("chat-view-active").style.display = "none";
     }
 
-    // СИНХРОНИЗАЦИЯ БАЗЫ КЛИЕНТОВ ДЛЯ УМНОГО ПОИСКА И ОБНОВЛЕНИЯ ДАННЫХ В РЕАЛЬНОМ ВРЕМЕНИ
     function loadAllUsersAndSync() {
         onValue(ref(db, 'users'), (snapshot) => {
             if(snapshot.exists()) {
                 allUsersCache = snapshot.val();
-                // При любом обновлении базы обновляем интерфейс друзей и заявок, если они открыты
                 updateFriendButton();
                 renderFriendRequestsInSettings();
                 renderSettingsFieldsFirstTime();
+                triggerSidebarRebuild(); 
             }
         });
         listenToIncomingChats();
@@ -609,13 +619,39 @@
         if(settingsLoadedOnce || !allUsersCache[currentUser]) return;
         let data = allUsersCache[currentUser];
         document.getElementById("set-display-name").value = data.displayName || currentUser;
-        document.getElementById("set-avatar").value = data.avatar || "👤";
         document.getElementById("set-country").value = data.country || "";
         document.getElementById("set-country-visible").checked = data.countryVisible !== false;
+        base64AvatarStr = data.avatar || "👤";
         settingsLoadedOnce = true;
     }
 
-    // УМНЫЙ ЖИВОЙ ПОИСК С ПРИОРИТЕТОМ ПО СТРАНЕ И УЧЕТОМ РЕГИСТРА
+    // ЛОГИКА ОБРАБОТКИ И ТРАНСФОРМАЦИИ КАРТИНКИ АВАТАРКИ В БАЗУ ДАННЫХ
+    document.getElementById("set-avatar-file").addEventListener("change", (e) => {
+        let file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 500 * 1024) { 
+            alert("Файл слишком большой! Пожалуйста, выберите картинку до 500 КБ.");
+            e.target.value = "";
+            return;
+        }
+        let reader = new FileReader();
+        reader.onload = function(event) {
+            base64AvatarStr = event.target.result; 
+            document.getElementById("avatar-preview-text").style.display = "block";
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // ФУНКЦИЯ РЕНДЕРА АВАТАРОК (УМЕЕТ РАБОТАТЬ И С КАРТИНКАМИ, И СО СМАЙЛИКАМИ)
+    function renderAvatarHTML(avatarData, cssClass = "avatar-img") {
+        if (!avatarData) avatarData = "👤";
+        if (avatarData.startsWith("data:image") || avatarData.startsWith("http")) {
+            return `<img src="${avatarData}" class="${cssClass}" style="object-fit: cover;">`;
+        }
+        return `<div class="${cssClass}">${avatarData}</div>`;
+    }
+
+    // УМНЫЙ ЖИВОЙ ПОИСК
     document.getElementById("search-input").addEventListener("input", (e) => {
         let query = e.target.value.trim().toLowerCase();
         let dropdown = document.getElementById("search-results-dropdown");
@@ -635,7 +671,6 @@
             }
         });
 
-        // СОРТИРОВКА: Пользователи из той же страны летят вверх!
         matches.sort((a, b) => {
             let aSame = (myCountry && a.data.country && a.data.country.toLowerCase() === myCountry.toLowerCase()) ? 1 : 0;
             let bSame = (myCountry && b.data.country && b.data.country.toLowerCase() === myCountry.toLowerCase()) ? 1 : 0;
@@ -648,9 +683,12 @@
                 let div = document.createElement("div");
                 div.className = "search-suggest-item";
                 let countryBadge = m.data.country ? `<span style="font-size:11px; color:#9ca3af;">📍 ${m.data.country}</span>` : "";
+                
                 div.innerHTML = `
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <span>${m.data.avatar || '👤'}</span>
+                        <div style="width:24px; height:24px; border-radius:50%; overflow:hidden; display:flex; justify-content:center; align-items:center; background:#4b5563;">
+                            ${renderAvatarHTML(m.data.avatar, "")}
+                        </div>
                         <b>${m.data.displayName || m.username}</b> <span style="font-size:11px; color:#4b5563;">@${m.username}</span>
                     </div>
                     ${countryBadge}
@@ -672,6 +710,12 @@
         hiddenChats = hiddenChats.filter(c => c !== username);
         localStorage.setItem("kirikgram_hidden_chats", JSON.stringify(hiddenChats));
         
+        // Добавляем в постоянный список открытых чатов, чтобы не пропал!
+        if (!activePartners.includes(username)) {
+            activePartners.push(username);
+            localStorage.setItem(`kirikgram_active_partners_${currentUser}`, JSON.stringify(activePartners));
+        }
+
         updateChatUI(username, "Нет сообщений", 0);
         switchChat(username);
     }
@@ -688,36 +732,62 @@
         if (!e.target.closest("#search-box")) document.getElementById("search-results-dropdown").style.display = "none";
     });
 
-    // ЖЕЛЕЗОБЕТОННЫЙ АЛГОРИТМ КОМНАТ ЧАТА
+    // ПОСТРОЕНИЕ СПИСКА ЧАТОВ С УЧЕТОМ ВЕЧНОЙ ПАМЯТИ
+    let globalRoomsSnapshotData = null;
+
     function listenToIncomingChats() {
         if (globalRoomsListener) off(ref(db, 'messages'));
 
         globalRoomsListener = onValue(ref(db, 'messages'), (snapshot) => {
-            let list = document.getElementById("chat-list");
-            list.innerHTML = "";
-            if (!snapshot.exists()) { list.innerHTML = `<div class="no-chats-msg" id="empty-notice">У вас пока нет истории чатов...</div>`; return; }
-            
-            const allRooms = snapshot.val();
-            let hasChats = false;
+            globalRoomsSnapshotData = snapshot.val();
+            triggerSidebarRebuild();
+        });
+    }
 
-            for (let roomId in allRooms) {
+    function triggerSidebarRebuild() {
+        let list = document.getElementById("chat-list");
+        list.innerHTML = "";
+        
+        let displaySet = new Set(activePartners);
+
+        if (globalRoomsSnapshotData) {
+            for (let roomId in globalRoomsSnapshotData) {
                 let parts = roomId.split("_");
-                // Проверяем строгое вхождение именно этого пользователя в комнату
                 if (parts.length === 2 && parts.includes(currentUser)) {
                     let partner = parts[0] === currentUser ? parts[1] : parts[0];
-                    if (hiddenChats.includes(partner)) continue;
-
-                    let messages = Object.entries(allRooms[roomId]);
-                    if(messages.length === 0) continue;
-                    
-                    let [lastId, lastMessageObj] = messages[messages.length - 1];
-                    let unreadCount = (partner !== currentChat) ? messages.filter(([id, m]) => m.sender === partner).length : 0;
-
-                    hasChats = true;
-                    updateChatUI(partner, lastMessageObj.text, unreadCount);
+                    if (!hiddenChats.includes(partner)) {
+                        displaySet.add(partner);
+                    }
                 }
             }
-            if (!hasChats) list.innerHTML = `<div class="no-chats-msg" id="empty-notice">У вас пока нет истории чатов...</div>`;
+        }
+
+        let sortedPartners = Array.from(displaySet);
+        if (sortedPartners.length === 0) {
+            list.innerHTML = `<div class="no-chats-msg" id="empty-notice">У вас пока нет истории чатов. Воспользуйтесь поиском!</div>`;
+            return;
+        }
+
+        sortedPartners.forEach(partner => {
+            if (allUsersCache[partner] && allUsersCache[partner].banned) return; 
+            
+            let lastText = "Нет сообщений";
+            let unreadCount = 0;
+
+            if (globalRoomsSnapshotData) {
+                let roomId = [currentUser, partner].sort().join("_");
+                if (globalRoomsSnapshotData[roomId]) {
+                    let messages = Object.entries(globalRoomsSnapshotData[roomId]);
+                    if (messages.length > 0) {
+                        let [lastId, lastMessageObj] = messages[messages.length - 1];
+                        lastText = lastMessageObj.text;
+                        if (partner !== currentChat) {
+                            unreadCount = messages.filter(([id, m]) => m.sender === partner).length;
+                        }
+                    }
+                }
+            }
+            updateChatUI(partner, lastText, unreadCount);
         });
     }
 
@@ -727,13 +797,20 @@
         let existingItem = document.getElementById("chat-item-" + partner);
         let pData = allUsersCache[partner] || {};
 
+        // Проверяем онлайн статус друга
+        let isOnline = pData.status === "online";
+        let statusDotClass = isOnline ? "status-online" : "status-offline";
+
         if (!existingItem) {
             let chatItem = document.createElement("div");
             chatItem.className = "chat-item" + (partner === currentChat ? " active" : "");
             chatItem.id = "chat-item-" + partner;
             
             chatItem.innerHTML = `
-                <div class="chat-item-avatar">${pData.avatar || '👤'}</div>
+                <div class="avatar-container">
+                    ${renderAvatarHTML(pData.avatar, "avatar-img")}
+                    <div class="status-dot ${statusDotClass}"></div>
+                </div>
                 <div class="chat-item-info">
                     <span class="chat-item-name">${pData.displayName || partner}</span>
                     <span class="chat-item-lastmsg" id="lastmsg-${partner}">${lastText}</span>
@@ -749,6 +826,8 @@
                 if(confirm(`Скрыть чат с ${pData.displayName || partner}?`)) {
                     hiddenChats.push(partner);
                     localStorage.setItem("kirikgram_hidden_chats", JSON.stringify(hiddenChats));
+                    activePartners = activePartners.filter(p => p !== partner);
+                    localStorage.setItem(`kirikgram_active_partners_${currentUser}`, JSON.stringify(activePartners));
                     document.getElementById("chat-item-" + partner).remove();
                     if(currentChat === partner) resetChatUI();
                 }
@@ -759,6 +838,12 @@
             if (partner !== currentChat && unreadCount > 0) {
                 badge.innerText = unreadCount; badge.style.display = "inline-block";
             } else { badge.style.display = "none"; }
+            
+            // На лету меняем цвет точки онлайна, если зашли/вышли
+            let dot = existingItem.querySelector(".status-dot");
+            if(dot) {
+                dot.className = `status-dot ${statusDotClass}`;
+            }
         }
     }
 
@@ -778,7 +863,6 @@
         document.getElementById("messages-area").innerHTML = "";
         updateFriendButton();
 
-        // Сортируем имена по алфавиту для 100% совпадения комнат на обоих устройствах!
         let roomId = [currentUser, currentChat].sort().join("_");
         currentRoomRef = ref(db, 'messages/' + roomId);
 
@@ -801,14 +885,15 @@
         row.id = "msg-" + msgId;
 
         row.innerHTML = `
-            <div class="msg-user-avatar" id="avatar-click-${msgId}">${uData.avatar || '👤'}</div>
+            <div class="msg-user-avatar-click" id="avatar-click-${msgId}">
+                ${renderAvatarHTML(uData.avatar, "msg-user-avatar-click")}
+            </div>
             <div class="message-bubble">
                 <span class="msg-author">${uData.displayName || msgObj.sender}</span>
                 <span>${msgObj.text}</span>
             </div>
         `;
 
-        // Клик на аватарку открывает профиль юзера
         row.querySelector(`#avatar-click-${msgId}`).onclick = (e) => {
             e.stopPropagation();
             viewUserProfile(msgObj.sender);
@@ -820,7 +905,7 @@
         area.scrollTop = area.scrollHeight;
     }
 
-    // ЛОГИКА КНОПКИ ДРУЗЕЙ В ХЕДЕРЕ ЧАТА
+    // ДРУЗЬЯ
     function updateFriendButton() {
         let btn = document.getElementById("add-friend-btn");
         if(!btn || !currentChat) return;
@@ -857,7 +942,7 @@
         let updates = {};
         updates[`users/${currentUser}/friends/${targetUser}`] = true;
         updates[`users/${targetUser}/friends/${currentUser}`] = true;
-        updates[`users/${currentUser}/friendRequests/${targetUser}`] = null; // удаляем входящую заявку
+        updates[`users/${currentUser}/friendRequests/${targetUser}`] = null; 
         update(ref(db), updates).then(() => {
             updateFriendButton();
         });
@@ -867,16 +952,25 @@
         update(ref(db, `users/${currentUser}/friendRequests`), { [targetUser]: null });
     }
 
-    // ОТКРЫТИЕ КАРТОЧКИ ПРОФИЛЯ ПО КЛИКУ НА АВАТАР
+    // ОТКРЫТИЕ КАРТОЧКИ ПРОФИЛЯ
     function viewUserProfile(username) {
         let data = allUsersCache[username];
         if(!data) return;
 
-        document.getElementById("prof-view-avatar").innerText = data.avatar || "👤";
+        let box = document.getElementById("prof-view-avatar-box");
+        box.innerHTML = renderAvatarHTML(data.avatar, "profile-avatar-big");
+
         document.getElementById("prof-view-name").innerText = data.displayName || username;
         document.getElementById("prof-view-username").innerText = "@" + username;
 
-        // Логика видимости страны
+        // Отображение сетевого статуса в карточке профиля
+        let statusSpan = document.getElementById("prof-view-online-status");
+        if(data.status === "online") {
+            statusSpan.innerText = "🟢 В сети"; statusSpan.style.color = "#10b981";
+        } else {
+            statusSpan.innerText = "🔴 Вне сети"; statusSpan.style.color = "#9ca3af";
+        }
+
         if (username === currentUser || data.countryVisible !== false || amIAdmin) {
             document.getElementById("prof-view-country").innerText = data.country || "Не указана";
         } else {
@@ -887,7 +981,6 @@
         document.getElementById("profile-modal").style.display = "flex";
     }
 
-    // МОДЕРАЦИЯ ЗАЯВОК В ДРУЗЬЯ ВНУТРИ НАСТРОЕК
     function renderFriendRequestsInSettings() {
         let listContainer = document.getElementById("friend-requests-list");
         listContainer.innerHTML = "";
@@ -903,7 +996,12 @@
             let div = document.createElement("div");
             div.className = "req-item";
             div.innerHTML = `
-                <span>${uData.avatar || '👤'} <b>${uData.displayName || reqUser}</b></span>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <div style="width:20px; height:20px; border-radius:50%; overflow:hidden; display:flex; justify-content:center; align-items:center; background:#4b5563;">
+                        ${renderAvatarHTML(uData.avatar, "")}
+                    </div>
+                    <b>${uData.displayName || reqUser}</b>
+                </div>
                 <div style="display:flex; gap:4px;">
                     <button class="modal-btn btn-primary" style="padding:2px 6px; font-size:11px;" id="acc-f-${reqUser}">✅</button>
                     <button class="modal-btn btn-danger" style="padding:2px 6px; font-size:11px;" id="dec-f-${reqUser}">✕</button>
@@ -916,20 +1014,20 @@
         });
     }
 
-    // СОХРАНЕНИЕ НАСТРОЕК ПРОФИЛЯ
+    // СОХРАНЕНИЕ НАСТРОЕК
     document.getElementById("save-settings-btn").onclick = () => {
         let dispName = document.getElementById("set-display-name").value.trim() || currentUser;
-        let avatarIcon = document.getElementById("set-avatar").value.trim() || "👤";
         let countryVal = document.getElementById("set-country").value.trim();
         let countryVis = document.getElementById("set-country-visible").checked;
 
         update(ref(db, `users/${currentUser}`), {
             displayName: dispName,
-            avatar: avatarIcon,
+            avatar: base64AvatarStr, 
             country: countryVal,
             countryVisible: countryVis
         }).then(() => {
             alert("Настройки успешно сохранены!");
+            document.getElementById("avatar-preview-text").style.display = "none";
             document.getElementById("settings-modal").style.display = "none";
         });
     };
@@ -979,64 +1077,113 @@
         }
     }
 
+    // МОДЕРНИЗИРОВАННАЯ АДМИНКА С УМНЫМ ПОИСКОМ И ВЫДАЧЕЙ РОЛЕЙ
+    function renderAdminUsersList(filterQuery = "") {
+        let listContainer = document.getElementById("admin-users-list");
+        listContainer.innerHTML = "";
+
+        Object.entries(allUsersCache).forEach(([username, uData]) => {
+            if(username === "KIRIK" || username === currentUser) return; 
+
+            // Фильтр умного поиска в админке
+            let dispName = (uData.displayName || username).toLowerCase();
+            if (filterQuery !== "" && !username.toLowerCase().includes(filterQuery) && !dispName.includes(filterQuery)) {
+                return; 
+            }
+
+            let item = document.createElement("div"); item.className = "admin-user-item";
+            let isBanned = uData.banned === true;
+            let isMuted = uData.mutedUntil === "perm" || (uData.mutedUntil && uData.mutedUntil > Date.now());
+            let isUserAdmin = uData.role === "admin";
+            let statusText = isBanned ? "🛑 БАН" : (isMuted ? "🔇 МУТ" : "🟢 ОК");
+
+            item.innerHTML = `
+                <div style="display:flex; align-items:center; gap:8px; max-width: 200px; overflow:hidden;">
+                    <div style="width:28px; height:28px; border-radius:50%; overflow:hidden; display:flex; justify-content:center; align-items:center; background:#4b5563; flex-shrink:0;">
+                        ${renderAvatarHTML(uData.avatar, "")}
+                    </div>
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="font-size:14px; font-weight:bold; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${uData.displayName || username}</span>
+                        <span style="font-size:11px; color:#aaa;">@${username} [${statusText}]</span>
+                    </div>
+                </div>
+                <div class="admin-actions-group">
+                    <button class="modal-btn btn-purple" style="padding:4px 6px; font-size:11px;" id="role-btn-${username}">${isUserAdmin ? 'Снять адм' : 'Дать адм'}</button>
+                    <button class="modal-btn btn-danger" style="padding:4px 6px; font-size:11px;" id="ban-btn-${username}">${isBanned ? 'Разбан' : 'Бан'}</button>
+                    <button class="modal-btn btn-warning" style="padding:4px 6px; font-size:11px;" id="mute-btn-${username}">${isMuted ? 'Размут' : 'Мут'}</button>
+                    <button class="modal-btn btn-danger" style="padding:4px 6px; font-size:11px; background:#991b1b;" id="del-btn-${username}">❌ Стереть</button>
+                </div>
+            `;
+            listContainer.appendChild(item);
+
+            // ЖЕЛЕЗОБЕТОННАЯ КНОПКА ВЫДАЧИ АДМИНКИ ДЛЯ ЛЁХИ
+            document.getElementById(`role-btn-${username}`).onclick = () => {
+                let nextRole = isUserAdmin ? "user" : "admin";
+                if(confirm(`Поменять роль пользователя ${username} на ${nextRole}?`)) {
+                    update(ref(db, `users/${username}`), { role: nextRole }).then(() => {
+                        // Локально перерендерим список
+                        renderAdminUsersList(document.getElementById("admin-search-input").value.trim().toLowerCase());
+                    });
+                }
+            };
+
+            // КНОПКА ПОЛНОГО УДАЛЕНИЯ ИЗ БАЗЫ
+            document.getElementById(`del-btn-${username}`).onclick = () => {
+                if(confirm(`⚠️ ВНИМАНИЕ! Полностью удалить аккаунт @${username} и стереть его из базы данных навсегда?`)) {
+                    remove(ref(db, `users/${username}`)).then(() => {
+                        renderAdminUsersList(document.getElementById("admin-search-input").value.trim().toLowerCase());
+                    });
+                }
+            };
+
+            // КНОПКА БАНА
+            document.getElementById(`ban-btn-${username}`).onclick = () => {
+                let reason = document.getElementById("admin-reason-input").value.trim() || "Нарушение правил";
+                let val = parseInt(document.getElementById("admin-time-input").value);
+                if (isBanned) { 
+                    update(ref(db, `users/${username}`), { banned: false, banDays: null }).then(() => renderAdminUsersList(document.getElementById("admin-search-input").value.trim().toLowerCase())); 
+                } else {
+                    let isPerm = isNaN(val) || val <= 0;
+                    if(confirm(isPerm ? `Забанить навсегда?` : `Забанить на ${val} дн.?`)) {
+                        update(ref(db, `users/${username}`), { banned: true, bannedBy: currentUser, banDays: isPerm ? "perm" : val, banReason: reason })
+                        .then(() => renderAdminUsersList(document.getElementById("admin-search-input").value.trim().toLowerCase()));
+                    }
+                }
+            };
+
+            // КНОПКА МУТА
+            document.getElementById(`mute-btn-${username}`).onclick = () => {
+                let reason = document.getElementById("admin-reason-input").value.trim() || "Спам";
+                let val = parseInt(document.getElementById("admin-time-input").value);
+                if (isMuted) { 
+                    update(ref(db, `users/${username}`), { mutedUntil: null, muteReason: null }).then(() => renderAdminUsersList(document.getElementById("admin-search-input").value.trim().toLowerCase())); 
+                } else {
+                    let isPerm = isNaN(val) || val <= 0;
+                    if(confirm(isPerm ? `Выдать перманентный мут?` : `Выдать мут на ${val} мин.?`)) {
+                        update(ref(db, `users/${username}`), { mutedUntil: isPerm ? "perm" : (Date.now() + val * 60000), muteReason: reason })
+                        .then(() => renderAdminUsersList(document.getElementById("admin-search-input").value.trim().toLowerCase()));
+                    }
+                }
+            };
+        });
+    }
+
     document.getElementById("admin-panel-btn").onclick = () => {
         if(!amIAdmin) return;
-        let listContainer = document.getElementById("admin-users-list");
-        listContainer.innerHTML = "Загрузка юзеров...";
+        document.getElementById("admin-search-input").value = "";
         document.getElementById("admin-modal").style.display = "flex";
-
-        get(ref(db, 'users')).then((snapshot) => {
-            listContainer.innerHTML = ""; if(!snapshot.exists()) return;
-            
-            Object.entries(snapshot.val()).forEach(([username, uData]) => {
-                if(username === "KIRIK" || username === currentUser) return; 
-                let item = document.createElement("div"); item.className = "admin-user-item";
-                let isBanned = uData.banned === true;
-                let isMuted = uData.mutedUntil === "perm" || (uData.mutedUntil && uData.mutedUntil > Date.now());
-                let isUserAdmin = uData.role === "admin";
-                let statusText = isBanned ? "🛑 БАН" : (isMuted ? "🔇 МУТ" : "🟢 ОК");
-
-                item.innerHTML = `
-                    <div style="display:flex; flex-direction:column; max-width: 160px;">
-                        <span>${uData.avatar || '👤'} <b>${username}</b></span>
-                        <span style="font-size:11px; color:#aaa;">Статус: ${statusText}</span>
-                    </div>
-                    <div class="admin-actions-group">
-                        <button class="modal-btn btn-purple" style="padding:5px 6px; font-size:11px;" id="role-btn-${username}">${isUserAdmin ? 'Снять адм.' : 'Дать адм.'}</button>
-                        <button class="modal-btn btn-danger" style="padding:5px 6px; font-size:11px;" id="ban-btn-${username}">${isBanned ? 'Разбан' : 'Бан'}</button>
-                        <button class="modal-btn btn-warning" style="padding:5px 6px; font-size:11px;" id="mute-btn-${username}">${isMuted ? 'Размут' : 'Мут'}</button>
-                    </div>
-                `;
-                listContainer.appendChild(item);
-
-                document.getElementById(`ban-btn-${username}`).onclick = () => {
-                    let reason = document.getElementById("admin-reason-input").value.trim() || "Нарушение правил";
-                    let val = parseInt(document.getElementById("admin-time-input").value);
-                    if (isBanned) { update(ref(db, `users/${username}`), { banned: false, banDays: null }).then(() => document.getElementById("admin-panel-btn").click()); } 
-                    else {
-                        let isPerm = isNaN(val) || val <= 0;
-                        if(confirm(isPerm ? `Забанить навсегда?` : `Забанить на ${val} дн.?`)) {
-                            update(ref(db, `users/${username}`), { banned: true, bannedBy: currentUser, banDays: isPerm ? "perm" : val, banReason: reason }).then(() => document.getElementById("admin-panel-btn").click());
-                        }
-                    }
-                };
-
-                document.getElementById(`mute-btn-${username}`).onclick = () => {
-                    let reason = document.getElementById("admin-reason-input").value.trim() || "Спам";
-                    let val = parseInt(document.getElementById("admin-time-input").value);
-                    if (isMuted) { update(ref(db, `users/${username}`), { mutedUntil: null, muteReason: null }).then(() => document.getElementById("admin-panel-btn").click()); } 
-                    else {
-                        let isPerm = isNaN(val) || val <= 0;
-                        if(confirm(isPerm ? `Выдать перманентный мут?` : `Выдать мут на ${val} мин.?`)) {
-                            update(ref(db, `users/${username}`), { mutedUntil: isPerm ? "perm" : (Date.now() + val * 60000), muteReason: reason }).then(() => document.getElementById("admin-panel-btn").click());
-                        }
-                    }
-                };
-            });
-        });
+        renderAdminUsersList();
     };
 
+    // Живой фильтр внутри админки при вводе букв
+    document.getElementById("admin-search-input").addEventListener("input", (e) => {
+        renderAdminUsersList(e.target.value.trim().toLowerCase());
+    });
+
     function forceLogoutToRegister() {
+        if(currentUser) {
+            update(ref(db, `users/${currentUser}`), { status: "offline" });
+        }
         if (currentRoomRef) off(currentRoomRef); if (globalRoomsListener) off(ref(db, 'messages'));
         if (userStatusListener) off(ref(db, 'users/' + currentUser));
         localStorage.removeItem("kirikgram_logged_user"); currentUser = ""; settingsLoadedOnce = false;
