@@ -148,6 +148,7 @@
         .btn-danger { background: #ff5555; }
         .btn-warning { background: #e09926; }
         .btn-primary { background: #5288c1; }
+        .btn-purple { background: #6f42c1; }
         .btn-secondary { background: #444; }
 
         /* ОКНО ЭКРАНА БАНА */
@@ -156,9 +157,9 @@
         #banned-details { background: #181818; border: 1px solid #333; padding: 15px; border-radius: 8px; text-align: left; font-size: 14px; margin: 15px 0; line-height: 1.5; }
 
         /* ОКНО АДМИНКИ */
-        #admin-modal .modal-content { width: 450px; max-height: 80vh; overflow-y: auto; text-align: left; }
+        #admin-modal .modal-content { width: 520px; max-height: 80vh; overflow-y: auto; text-align: left; }
         .admin-user-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #333; }
-        .admin-actions-group { display: flex; gap: 5px; }
+        .admin-actions-group { display: flex; gap: 4px; }
         .admin-input-small { background: #181818; border: 1px solid #333; color: white; padding: 4px; border-radius: 4px; width: 100%; margin-top: 5px; font-size: 13px; box-sizing: border-box; }
     </style>
 </head>
@@ -267,7 +268,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-    import { getDatabase, ref, set, get, remove, push, onChildAdded, onChildRemoved, off, onValue } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
+    import { getDatabase, ref, set, update, get, remove, push, onChildAdded, onChildRemoved, off, onValue } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyB86-UBtg14ECIK7rpUcYf3dwK4rBCcDiw",
@@ -290,7 +291,7 @@
     let globalRoomsListener = null;
     let userStatusListener = null;
     let selectedMsgId = null;
-    let adminsList = ["KIRIK"]; // Сюда позже можно дописывать имена других админов
+    let amIAdmin = false;
 
     window.addEventListener('DOMContentLoaded', () => {
         let savedUser = localStorage.getItem("kirikgram_logged_user");
@@ -312,23 +313,26 @@
         else document.getElementById(screenId).style.display = 'block';
     }
 
-    // ПРОВЕРКА НА БАН И СТАРТ СИСТЕМЫ
     function checkBanAndStart() {
         if (userStatusListener) off(ref(db, 'users/' + currentUser));
 
-        // LIVE-Слежка за статусом текущего аккаунта в базе данных
         userStatusListener = onValue(ref(db, 'users/' + currentUser), (snapshot) => {
             if (!snapshot.exists()) {
-                // Если аккаунт удалили из базы пока мы сидели в чате
-                if (currentUser) {
-                    forceLogoutToRegister();
-                }
+                if (currentUser) forceLogoutToRegister();
                 return;
             }
 
             let userData = snapshot.val();
 
-            // Проверяем бан
+            // Жестко проверяем, админ ли текущий пользователь по флагу role
+            if (userData.role === "admin" || currentUser === "KIRIK") {
+                amIAdmin = true;
+                document.getElementById("admin-panel-btn").style.display = "block";
+            } else {
+                amIAdmin = false;
+                document.getElementById("admin-panel-btn").style.display = "none";
+            }
+
             if (userData.banned) {
                 if (currentRoomRef) off(currentRoomRef);
                 if (globalRoomsListener) off(ref(db, 'messages'));
@@ -340,10 +344,8 @@
                 return;
             }
 
-            // Проверяем мут (постоянное обновление интерфейса)
             checkMuteStatus(userData.mutedUntil, userData.muteReason);
 
-            // Если всё чисто и мы ещё не зашли в интерфейс чата
             if (document.getElementById("telegram-container").style.display !== "flex" && document.getElementById("banned-screen").style.display !== "block") {
                 startChatSystem();
             }
@@ -358,7 +360,6 @@
         if (mutedUntil && mutedUntil > Date.now()) {
             inputField.style.display = "none";
             sendBtn.style.display = "none";
-            
             let timeLeft = Math.ceil((mutedUntil - Date.now()) / 60000);
             muteText.innerText = `Вы замучены ещё на ${timeLeft} мин. Причина: ${reason || "Без причины"}`;
             muteText.style.display = "block";
@@ -377,13 +378,18 @@
 
         if (!name || !pass || !confirm) { errorDiv.innerText = "Заполните все поля!"; return; }
         if (pass !== confirm) { errorDiv.innerText = "Пароли не совпадают!"; return; }
-        if (adminsList.includes(name) && name !== "KIRIK") { errorDiv.innerText = "Имя зарезервировано!"; return; }
 
         get(ref(db, 'users/' + name)).then((snapshot) => {
             if (snapshot.exists()) {
                 errorDiv.innerText = "Это имя уже занято!";
             } else {
-                set(ref(db, 'users/' + name), { password: pass, banned: false }).then(() => {
+                // По умолчанию все обычные пользователи (user), а KIRIK автоматически admin
+                let defaultRole = (name === "KIRIK") ? "admin" : "user";
+                set(ref(db, 'users/' + name), { 
+                    password: pass, 
+                    banned: false,
+                    role: defaultRole
+                }).then(() => {
                     saveUserAndLogin(name);
                 });
             }
@@ -399,6 +405,10 @@
             if (snapshot.exists()) {
                 let uData = snapshot.val();
                 if (uData.password === pass) {
+                    // Страховка: если KIRIK заходит, гарантируем ему админку
+                    if(name === "KIRIK" && uData.role !== "admin") {
+                        update(ref(db, 'users/KIRIK'), { role: "admin" });
+                    }
                     saveUserAndLogin(name);
                 } else {
                     errorDiv.innerText = "Incorrect password!";
@@ -418,23 +428,7 @@
     function startChatSystem() {
         showScreen('telegram-container');
         resetChatUI();
-        checkAdminButton();
         listenToIncomingChats();
-    }
-
-    function checkAdminButton() {
-        get(ref(db, 'users/KIRIK')).then((snapshot) => {
-            if (snapshot.exists() && snapshot.val().password === "KIRIK_OWNER345543" && currentUser === "KIRIK") {
-                document.getElementById("admin-panel-btn").style.display = "block";
-            } else {
-                // Если ты добавишь новые админ-аккаунты в базу, здесь можно расширить проверку
-                if (adminsList.includes(currentUser) && currentUser !== "KIRIK") {
-                    document.getElementById("admin-panel-btn").style.display = "block";
-                } else {
-                    document.getElementById("admin-panel-btn").style.display = "none";
-                }
-            }
-        });
     }
 
     function resetChatUI() {
@@ -594,12 +588,11 @@
         container.innerHTML = "";
 
         let isMe = sender === currentUser;
-        let isAdmin = adminsList.includes(currentUser);
 
-        if (isMe || isAdmin) {
+        if (isMe || amIAdmin) {
             let btnAll = document.createElement("button");
             btnAll.className = "modal-btn btn-danger";
-            btnAll.innerText = isAdmin && !isMe ? "Удалить для всех (Админ)" : "Удалить для всех";
+            btnAll.innerText = amIAdmin && !isMe ? "Удалить для всех (Админ)" : "Удалить для всех";
             btnAll.onclick = deleteMessageForEveryone;
             container.appendChild(btnAll);
         }
@@ -647,8 +640,10 @@
         }
     }
 
-    // АДМИН-ПАНЕЛЬ (ЛОГИКА БАНА И МУТА)
+    // ОТКРЫТИЕ АДМИН-ПАНЕЛИ
     document.getElementById("admin-panel-btn").onclick = () => {
+        if(!amIAdmin) return;
+        
         let listContainer = document.getElementById("admin-users-list");
         listContainer.innerHTML = "Загрузка юзеров...";
         document.getElementById("admin-modal").style.display = "flex";
@@ -665,19 +660,24 @@
                 
                 let isBanned = uData.banned === true;
                 let isMuted = uData.mutedUntil && uData.mutedUntil > Date.now();
+                let isUserAdmin = uData.role === "admin";
 
                 item.innerHTML = `
-                    <div style="display:flex; flex-direction:column;">
+                    <div style="display:flex; flex-direction:column; max-width: 160px;">
                         <span>👤 <b>${username}</b></span>
                         <span style="font-size:11px; color:#aaa;">
-                            ${isBanned ? '🛑 ЗАБАНЕН' : (isMuted ? '🔇 В МУТЕ' : '🟢 Активен')}
+                            Роль: ${isUserAdmin ? '⭐ Админ' : 'Пользователь'}<br>
+                            Статус: ${isBanned ? '🛑 БАН' : (isMuted ? '🔇 МУТ' : '🟢 ОК')}
                         </span>
                     </div>
                     <div class="admin-actions-group">
-                        <button class="modal-btn btn-danger" style="padding:5px 8px; font-size:11px;" id="ban-btn-${username}">
+                        <button class="modal-btn btn-purple" style="padding:5px 6px; font-size:11px;" id="role-btn-${username}">
+                            ${isUserAdmin ? 'Снять адм.' : 'Дать адм.'}
+                        </button>
+                        <button class="modal-btn btn-danger" style="padding:5px 6px; font-size:11px;" id="ban-btn-${username}">
                             ${isBanned ? 'Разбан' : 'Бан'}
                         </button>
-                        <button class="modal-btn btn-warning" style="padding:5px 8px; font-size:11px;" id="mute-btn-${username}">
+                        <button class="modal-btn btn-warning" style="padding:5px 6px; font-size:11px;" id="mute-btn-${username}">
                             ${isMuted ? 'Размут' : 'Мут'}
                         </button>
                     </div>
@@ -685,19 +685,31 @@
 
                 listContainer.appendChild(item);
 
-                // ЛОГИКА НАЖАТИЯ НА КНОПКУ БАНА
+                // ФУНКЦИЯ «СДЕЛАТЬ АДМИНОМ»
+                document.getElementById(`role-btn-${username}`).onclick = () => {
+                    let newRole = isUserAdmin ? "user" : "admin";
+                    let confirmText = isUserAdmin ? `Снять права администратора с ${username}?` : `Сделать пользователя ${username} администратором?`;
+                    
+                    if(confirm(confirmText)) {
+                        update(ref(db, `users/${username}`), { role: newRole }).then(() => {
+                            // Перезагружаем список в админке
+                            document.getElementById("admin-panel-btn").click();
+                        });
+                    }
+                };
+
+                // ИСПРАВЛЕННЫЙ БАН (через update, не стирает пароли)
                 document.getElementById(`ban-btn-${username}`).onclick = () => {
                     let reason = document.getElementById("admin-reason-input").value.trim() || "Нарушение правил проекта";
                     let days = parseInt(document.getElementById("admin-time-input").value) || 1;
 
                     if (isBanned) {
-                        set(ref(db, `users/${username}/banned`), false).then(() => document.getElementById("admin-panel-btn").click());
+                        update(ref(db, `users/${username}`), { banned: false }).then(() => document.getElementById("admin-panel-btn").click());
                     } else {
                         if(confirm(`Забанить ${username} на ${days} дн.?`)) {
-                            set(ref(db, `users/${username}`), {
-                                password: uData.password,
+                            update(ref(db, `users/${username}`), {
                                 banned: true,
-                                bannedBy: currentUser, // Записываем, какой именно админ забанил!
+                                bannedBy: currentUser,
                                 banDays: days,
                                 banReason: reason
                             }).then(() => document.getElementById("admin-panel-btn").click());
@@ -705,19 +717,20 @@
                     }
                 };
 
-                // ЛОГИКА НАЖАТИЯ НА КНОПКУ МУТА
+                // ИСПРАВЛЕННЫЙ МУТ (через update)
                 document.getElementById(`mute-btn-${username}`).onclick = () => {
                     let reason = document.getElementById("admin-reason-input").value.trim() || "Флуд / Спам";
                     let minutes = parseInt(document.getElementById("admin-time-input").value) || 5;
 
                     if (isMuted) {
-                        // Снимаем мут (затираем время)
-                        set(ref(db, `users/${username}/mutedUntil`), 0).then(() => document.getElementById("admin-panel-btn").click());
+                        update(ref(db, `users/${username}`), { mutedUntil: 0 }).then(() => document.getElementById("admin-panel-btn").click());
                     } else {
                         if(confirm(`Выдать мут ${username} на ${minutes} мин.?`)) {
-                            let mutedUntilTimestamp = Date.now() + (minutes * 60000); // Переводим минуты в миллисекунды
-                            set(ref(db, `users/${username}/mutedUntil`), mutedUntilTimestamp);
-                            set(ref(db, `users/${username}/muteReason`), reason).then(() => document.getElementById("admin-panel-btn").click());
+                            let mutedUntilTimestamp = Date.now() + (minutes * 60000);
+                            update(ref(db, `users/${username}`), {
+                                mutedUntil: mutedUntilTimestamp,
+                                muteReason: reason
+                            }).then(() => document.getElementById("admin-panel-btn").click());
                         }
                     }
                 };
@@ -752,11 +765,7 @@
     document.getElementById("to-login-link").onclick = () => showScreen('login-screen');
     document.getElementById("back-to-reg").onclick = () => showScreen('register-screen');
     document.getElementById("close-admin-btn").onclick = () => document.getElementById("admin-modal").style.display = "none";
-    
-    // Кнопка «Создать новый аккаунт» на экране бана
-    document.getElementById("ban-create-new-btn").onclick = () => {
-        forceLogoutToRegister();
-    };
+    document.getElementById("ban-create-new-btn").onclick = forceLogoutToRegister;
 
     document.getElementById("msg-options-modal").onclick = (e) => {
         if(e.target.id === "msg-options-modal") document.getElementById("msg-options-modal").style.display = "none";
