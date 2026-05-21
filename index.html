@@ -70,9 +70,8 @@
             box-shadow: 0 8px 24px rgba(0,0,0,0.6);
         }
 
-        /* ЛЕВАЯ ПАНЕЛЬ */
         #side-panel { 
-            width: 250px; 
+            width: 280px; 
             background: #1e1e1e; 
             border-right: 1px solid #2f2f2f; 
             display: flex; 
@@ -89,9 +88,9 @@
         #brand-title { font-size: 20px; font-weight: bold; color: #5288c1; }
         #logout-btn { background: none; border: none; color: #ff5555; cursor: pointer; font-size: 14px; }
 
-        /* БЛОК ПОИСКА ДРУЗЕЙ */
-        #search-area {
-            padding: 10px;
+        /* Блок поиска */
+        #search-box {
+            padding: 10px 15px;
             border-bottom: 1px solid #2f2f2f;
             display: flex;
             gap: 5px;
@@ -111,14 +110,21 @@
             border: none;
             color: white;
             border-radius: 5px;
-            padding: 0 10px;
             cursor: pointer;
-            font-size: 13px;
+            padding: 0 10px;
         }
 
-        #chats-list {
+        /* Список чатов */
+        #chat-list {
             flex: 1;
             overflow-y: auto;
+        }
+        .no-chats-msg {
+            padding: 20px;
+            color: #aaaaaa;
+            font-size: 14px;
+            text-align: center;
+            line-height: 1.4;
         }
 
         .chat-item { 
@@ -130,7 +136,7 @@
         .chat-item:hover { background: #2c2c2c; }
         .chat-item.active { background: #2b5278; }
 
-        /* ПРАВАЯ ПАНЕЛЬ */
+        /* Правая часть чата */
         #main-chat { 
             flex: 1; 
             display: flex; 
@@ -143,7 +149,6 @@
             background: #212121; 
             font-weight: bold; 
             border-bottom: 1px solid #2f2f2f;
-            display: none; /* Прячем заголовок чата, пока никого не выбрали */
         }
 
         #messages-area { 
@@ -153,17 +158,14 @@
             display: flex; 
             flex-direction: column;
             gap: 10px;
-            justify-content: center; /* По центру для начального текста */
-            align-items: center;
         }
 
-        /* Текст-заглушка */
-        #no-history-text {
-            color: #7f8c8d;
-            font-size: 16px;
-            text-align: center;
-            max-width: 80%;
-            line-height: 1.4;
+        .chat-placeholder {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            color: #777;
         }
 
         .message { 
@@ -172,14 +174,13 @@
             border-radius: 10px; 
             font-size: 15px; 
             word-wrap: break-word;
-            align-self: flex-start;
         }
         .msg-outbound { background: #2b5278; align-self: flex-end; }
 
         #input-panel { 
             padding: 15px; 
             background: #212121; 
-            display: none; /* Скрыто, пока не выбран чат */
+            display: flex; 
             gap: 10px; 
         }
 
@@ -254,26 +255,31 @@
             <button id="logout-btn" onclick="openLogoutModal()">Выйти</button>
         </div>
         
-        <div id="search-area">
-            <input type="text" id="search-input" placeholder="Найти друга...">
-            <button id="search-btn" onclick="findUser()">Найти</button>
+        <div id="search-box">
+            <input type="text" id="search-input" placeholder="Найти друга по имени...">
+            <button id="search-btn" onclick="handleSearch()">Найти</button>
         </div>
-        
-        <div id="chats-list"></div>
-    </div>
+        <div id="search-error" class="error-msg" style="text-align:center; font-size:12px;"></div>
 
-    <div id="main-chat">
-        <div id="chat-header">Чат: </div>
-        
-        <div id="messages-area">
-            <div id="no-history-text">
+        <div id="chat-list">
+            <div class="no-chats-msg" id="empty-notice">
                 You don't have a chat history, please find your chat partners in the search.
             </div>
         </div>
+    </div>
+
+    <div id="main-chat">
+        <div id="chat-view-placeholder" class="chat-placeholder">
+            Выберите, с кем хотите начать переписку
+        </div>
         
-        <div id="input-panel">
-            <input type="text" id="message-input" placeholder="Написать сообщение...">
-            <button id="send-btn" onclick="processSend()">Отправить</button>
+        <div id="chat-view-active" style="display: none; flex-direction: column; flex: 1;">
+            <div id="chat-header">Чат: ...</div>
+            <div id="messages-area"></div>
+            <div id="input-panel">
+                <input type="text" id="message-input" placeholder="Написать сообщение...">
+                <button id="send-btn" onclick="processSend()">Отправить</button>
+            </div>
         </div>
     </div>
 </div>
@@ -291,7 +297,7 @@
 <script>
     let currentUser = "";
     let currentChat = "";
-    let activeChats = []; // Список чатов, которые сейчас отображаются слева
+    let activeChats = []; // Список открытых чатов
 
     function showScreen(screenId) {
         document.getElementById("register-screen").style.display = "none";
@@ -302,6 +308,7 @@
         
         document.getElementById("reg-error").innerText = "";
         document.getElementById("login-error").innerText = "";
+        document.getElementById("search-error").innerText = "";
     }
 
     // Регистрация
@@ -322,7 +329,6 @@
 
         localStorage.setItem("user_" + name, pass);
         currentUser = name;
-        
         resetChatSystem();
         showScreen('telegram-container');
     }
@@ -345,79 +351,83 @@
         showScreen('telegram-container');
     }
 
-    // Сброс окон при перезаходе
+    // Сброс чат-системы при входе нового юзера
     function resetChatSystem() {
-        currentChat = "";
         activeChats = [];
-        document.getElementById("chats-list").innerHTML = "";
-        document.getElementById("messages-area").innerHTML = '<div id="no-history-text">You don't have a chat history, please find your chat partners in the search.</div>';
-        document.getElementById("messages-area").style.justifyContent = "center";
-        document.getElementById("chat-header").style.display = "none";
-        document.getElementById("input-panel").style.display = "none";
+        currentChat = "";
+        document.getElementById("chat-list").innerHTML = `
+            <div class="no-chats-msg" id="empty-notice">
+                You don't have a chat history, please find your chat partners in the search.
+            </div>`;
+        document.getElementById("chat-view-placeholder").style.display = "flex";
+        document.getElementById("chat-view-active").style.display = "none";
         document.getElementById("search-input").value = "";
     }
 
-    // ПОИСК ПОЛЬЗОВАТЕЛЕЙ
-    function findUser() {
-        let searchName = document.getElementById("search-input").value.trim();
+    // Поиск пользователей
+    function handleSearch() {
+        let searchInput = document.getElementById("search-input");
+        let searchName = searchInput.value.trim();
+        let errorDiv = document.getElementById("search-error");
+        
+        errorDiv.innerText = "";
+
         if (searchName === "") return;
-
-        // Проверяем, зарегистрирован ли вообще такой человек в localStorage
-        let userExists = localStorage.getItem("user_" + searchName);
-
-        if (!userExists) {
-            alert("Пользователь " + searchName + " не найден в KIRIKGRAM!");
-            return;
-        }
-
+        
         if (searchName === currentUser) {
-            alert("Вы не можете искать самого себя!");
+            errorDiv.innerText = "Нельзя создать чат с самим собой!";
             return;
         }
 
-        // Если такой чат уже добавлен слева, просто переключаемся на него
-        if (activeChats.includes(searchName)) {
+        // Проверяем, существует ли такой аккаунт в базе localStorage
+        let targetUser = localStorage.getItem("user_" + searchName);
+
+        if (targetUser) {
+            // Если аккаунт найден, создаем чат (если его еще нет в списке)
+            if (!activeChats.includes(searchName)) {
+                activeChats.push(searchName);
+                
+                // Удаляем надпись "You don't have a chat history..." если она есть
+                let notice = document.getElementById("empty-notice");
+                if (notice) notice.remove();
+                
+                // Добавляем новый элемент чата в список
+                let list = document.getElementById("chat-list");
+                let chatItem = document.createElement("div");
+                chatItem.className = "chat-item";
+                chatItem.id = "chat-item-" + searchName;
+                chatItem.innerText = searchName;
+                chatItem.onclick = function() { switchChat(searchName); };
+                list.appendChild(chatItem);
+            }
+            
+            // Сразу переключаемся на этот чат
             switchChat(searchName);
-            return;
+            searchInput.value = "";
+        } else {
+            errorDiv.innerText = "Пользователь не найден!";
         }
-
-        // Добавляем в массив активных чатов и рендерим в колонку
-        activeChats.push(searchName);
-        let chatsList = document.getElementById("chats-list");
-        
-        let newChatItem = document.createElement("div");
-        newChatItem.className = "chat-item";
-        newChatItem.innerText = searchName;
-        newChatItem.onclick = function() { switchChat(searchName); };
-        
-        chatsList.appendChild(newChatItem);
-        
-        // Сразу открываем этот чат
-        switchChat(searchName);
     }
 
     // Переключение чатов
     function switchChat(chatName) {
         currentChat = chatName;
         
-        // Показываем заголовок чата и поле ввода
-        document.getElementById("chat-header").style.display = "block";
-        document.getElementById("chat-header").innerText = "Чат: " + chatName;
-        document.getElementById("input-panel").style.display = "flex";
+        // Показываем окно чата, скрываем заглушку
+        document.getElementById("chat-view-placeholder").style.display = "none";
+        document.getElementById("chat-view-active").style.display = "flex";
         
-        // Перестраиваем область сообщений (убираем заглушку, включаем режим чата)
-        let area = document.getElementById("messages-area");
-        area.innerHTML = ""; 
-        area.style.justifyContent = "flex-end"; // Сообщения прижимаются к низу
-
-        // Подсвечиваем выбранный чат в списке слева
+        document.getElementById("chat-header").innerText = "Чат: " + chatName;
+        
+        // Визуальное выделение активного чата
         let items = document.getElementsByClassName("chat-item");
         for (let item of items) {
             item.classList.remove("active");
-            if (item.innerText === chatName) {
-                item.classList.add("active");
-            }
         }
+        let activeItem = document.getElementById("chat-item-" + chatName);
+        if (activeItem) activeItem.classList.add("active");
+        
+        document.getElementById("messages-area").innerHTML = ""; // Очистка экрана сообщений
     }
 
     // Отправка сообщений
@@ -436,7 +446,7 @@
         }
     }
 
-    // Модалка выхода
+    // Выход из аккаунта
     function openLogoutModal() { document.getElementById("confirm-modal").style.display = "flex"; }
     function closeLogoutModal() { document.getElementById("confirm-modal").style.display = "none"; }
     
@@ -451,8 +461,13 @@
         showScreen('register-screen');
     }
 
+    // Слушатели кнопок Enter
     document.getElementById("message-input").addEventListener("keypress", function(e) {
         if (e.key === "Enter") { processSend(); }
+    });
+    
+    document.getElementById("search-input").addEventListener("keypress", function(e) {
+        if (e.key === "Enter") { handleSearch(); }
     });
 </script>
 
