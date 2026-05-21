@@ -15,7 +15,7 @@
             height: 100vh; 
         }
 
-        /* ОКНА АВТОРИЗАЦИИ / РЕГИСТРАЦИИ */
+        /* ОКНА АВТОРИЗАЦИИ */
         .auth-card {
             background: #212121;
             padding: 30px;
@@ -122,14 +122,45 @@
             line-height: 1.4;
         }
 
+        /* Дизайн элементов чата слева */
         .chat-item { 
-            padding: 15px 20px; 
+            padding: 12px 15px; 
             cursor: pointer; 
             border-bottom: 1px solid #252525;
             transition: background 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
         .chat-item:hover { background: #2c2c2c; }
         .chat-item.active { background: #2b5278; }
+        
+        .chat-item-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-item-name { font-weight: bold; font-size: 15px; color: #fff; }
+        
+        .chat-item-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        .chat-item-lastmsg { font-size: 13px; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+        
+        /* Зеленый кружок непрочитанных */
+        .badge {
+            background: #4f9e5c;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 2px 7px;
+            border-radius: 10px;
+            min-width: 10px;
+            text-align: center;
+        }
 
         #main-chat { 
             flex: 1; 
@@ -223,7 +254,7 @@
 </head>
 <body>
 
-<div id="register-screen" class="auth-card" style="display: block;">
+<div id="register-screen" class="auth-card">
     <h2>Welcome to KIRIKGRAM</h2>
     <input type="text" id="reg-name" placeholder="Имя">
     <input type="password" id="reg-pass" placeholder="Пароль">
@@ -271,7 +302,7 @@
             <div id="chat-header">Чат: ...</div>
             <div id="messages-area"></div>
             <div id="input-panel">
-                <input type="text" id="message-input" placeholder="Написать сообщение...">
+                <input type="text" id="message-input" placeholder="Написать message...">
                 <button id="send-btn">Отправить</button>
             </div>
         </div>
@@ -290,9 +321,8 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-    import { getDatabase, ref, set, get, child, push, onChildAdded, off } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
+    import { getDatabase, ref, set, get, child, push, onChildAdded, off, onValue } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
 
-    // Твой личный скопированный паспорт Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyB86-UBtg14ECIK7rpUcYf3dwK4rBCcDiw",
         authDomain: "kirikgram.firebaseapp.com",
@@ -303,25 +333,33 @@
         measurementId: "G-J9YZ24CLJR"
     };
 
-    // Старт работы с базой
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
     let currentUser = "";
     let currentChat = "";
-    let activeChats = [];
+    let activeChats = {}; // Словарь для отслеживания чатов и их данных
     let currentRoomRef = null;
+    let globalRoomsListener = null;
 
-    // Переключение экранов
+    // ПРОВЕРКА АВТО-ВХОДА ПРИ СТАРТЕ
+    window.addEventListener('DOMContentLoaded', () => {
+        let savedUser = localStorage.getItem("kirikgram_logged_user");
+        if (savedUser) {
+            currentUser = savedUser;
+            startChatSystem();
+        } else {
+            showScreen('register-screen');
+        }
+    });
+
     function showScreen(screenId) {
         document.getElementById("register-screen").style.display = "none";
         document.getElementById("login-screen").style.display = "none";
         document.getElementById("telegram-container").style.display = "none";
-        
         document.getElementById(screenId).style.display = screenId === 'telegram-container' ? 'flex' : 'block';
     }
 
-    // Регистрация в облаке
     function handleRegister() {
         let name = document.getElementById("reg-name").value.trim();
         let pass = document.getElementById("reg-pass").value;
@@ -337,15 +375,12 @@
                 errorDiv.innerText = "Это имя уже занято!";
             } else {
                 set(ref(db, 'users/' + name), { password: pass }).then(() => {
-                    currentUser = name;
-                    resetChatSystem();
-                    showScreen('telegram-container');
+                    saveUserAndLogin(name);
                 });
             }
         });
     }
 
-    // Вход через облако
     function handleLogin() {
         let name = document.getElementById("login-name").value.trim();
         let pass = document.getElementById("login-pass").value;
@@ -353,17 +388,27 @@
 
         get(ref(db, 'users/' + name)).then((snapshot) => {
             if (snapshot.exists() && snapshot.val().password === pass) {
-                currentUser = name;
-                resetChatSystem();
-                showScreen('telegram-container');
+                saveUserAndLogin(name);
             } else {
                 errorDiv.innerText = "Incorrect password!";
             }
         });
     }
 
-    function resetChatSystem() {
-        activeChats = [];
+    function saveUserAndLogin(name) {
+        currentUser = name;
+        localStorage.setItem("kirikgram_logged_user", name); // Запоминаем браузер
+        startChatSystem();
+    }
+
+    function startChatSystem() {
+        showScreen('telegram-container');
+        resetChatUI();
+        listenToIncomingChats();
+    }
+
+    function resetChatUI() {
+        activeChats = {};
         currentChat = "";
         document.getElementById("chat-list").innerHTML = `
             <div class="no-chats-msg" id="empty-notice">
@@ -373,7 +418,7 @@
         document.getElementById("chat-view-active").style.display = "none";
     }
 
-    // Поиск по глобальной базе
+    // ПОИСК ПОЛЬЗОВАТЕЛЯ
     function handleSearch() {
         let searchInput = document.getElementById("search-input");
         let searchName = searchInput.value.trim();
@@ -393,31 +438,97 @@
         });
     }
 
-    function addChatToList(chatName) {
-        if (!activeChats.includes(chatName)) {
-            activeChats.push(chatName);
-            let notice = document.getElementById("empty-notice");
-            if (notice) notice.remove();
+    // СЛЕЖКА ЗА ВСЕМИ КОМНАТАМИ В ОБЛАКЕ (чтобы ловить входящие сообщения)
+    function listenToIncomingChats() {
+        if (globalRoomsListener) { off(ref(db, 'messages')); }
+
+        globalRoomsListener = onValue(ref(db, 'messages'), (snapshot) => {
+            if (!snapshot.exists()) return;
             
-            let list = document.getElementById("chat-list");
+            const allRooms = snapshot.val();
+            for (let roomId in allRooms) {
+                // Проверяем, относится ли комната к текущему пользователю
+                if (roomId.includes(currentUser)) {
+                    let parts = roomId.split("_");
+                    let partner = parts[0] === currentUser ? parts[1] : parts[0];
+
+                    // Получаем массив сообщений комнаты
+                    let messages = Object.values(allRooms[roomId]);
+                    let lastMessageObj = messages[messages.length - 1];
+
+                    // Считаем непрочитанные сообщения (если мы не в этом чате прямо сейчас)
+                    let unreadCount = 0;
+                    if (partner !== currentChat) {
+                        // Для простоты считаем все входящие сообщения в этой сессии
+                        // Чтобы сделать точный счетчик, можно проверять статус прочитано, 
+                        // но для базовой логики пока считаем новые входящие.
+                        unreadCount = messages.filter(m => m.sender === partner).length; 
+                    }
+
+                    // Обновляем или добавляем чат на панель
+                    updateChatUI(partner, lastMessageObj.text, unreadCount);
+                }
+            }
+        });
+    }
+
+    function updateChatUI(partner, lastText, unreadCount) {
+        let notice = document.getElementById("empty-notice");
+        if (notice) notice.remove();
+
+        let list = document.getElementById("chat-list");
+        let existingItem = document.getElementById("chat-item-" + partner);
+
+        if (!existingItem) {
+            activeChats[partner] = { unread: unreadCount };
+            
             let chatItem = document.createElement("div");
             chatItem.className = "chat-item";
-            chatItem.id = "chat-item-" + chatName;
-            chatItem.innerText = chatName;
-            chatItem.onclick = function() { switchChat(chatName); };
+            chatItem.id = "chat-item-" + partner;
+            chatItem.onclick = function() { switchChat(partner); };
+            
+            chatItem.innerHTML = `
+                <div class="chat-item-top">
+                    <span class="chat-item-name">${partner}</span>
+                </div>
+                <div class="chat-item-bottom">
+                    <span class="chat-item-lastmsg" id="lastmsg-${partner}">${lastText}</span>
+                    <span class="badge" id="badge-${partner}" style="display: ${unreadCount > 0 ? 'block' : 'none'}">${unreadCount}</span>
+                </div>
+            `;
             list.appendChild(chatItem);
+        } else {
+            // Обновляем текст последнего сообщения
+            document.getElementById("lastmsg-" + partner).innerText = lastText;
+            
+            // Если чат не активен, обновляем счетчик
+            let badge = document.getElementById("badge-" + partner);
+            if (partner !== currentChat && unreadCount > 0) {
+                badge.innerText = unreadCount;
+                badge.style.display = "block";
+            } else {
+                badge.style.display = "none";
+            }
         }
     }
 
-    // Подключение к комнате общения
+    function addChatToList(chatName) {
+        updateChatUI(chatName, "Нет сообщений", 0);
+    }
+
+    // ПЕРЕКЛЮЧЕНИЕ ЧАТА
     function switchChat(chatName) {
-        if (currentRoomRef) { off(currentRoomRef); } // Снимаем старую слежку за сообщениями
+        if (currentRoomRef) { off(currentRoomRef); }
         
         currentChat = chatName;
         document.getElementById("chat-view-placeholder").style.display = "none";
         document.getElementById("chat-view-active").style.display = "flex";
         document.getElementById("chat-header").innerText = "Чат: " + chatName;
         
+        // Убираем зеленый кружок прочитанного чата
+        let badge = document.getElementById("badge-" + chatName);
+        if (badge) badge.style.display = "none";
+
         let items = document.getElementsByClassName("chat-item");
         for (let item of items) { item.classList.remove("active"); }
         let activeItem = document.getElementById("chat-item-" + chatName);
@@ -428,7 +539,6 @@
         let roomId = currentUser < currentChat ? currentUser + "_" + currentChat : currentChat + "_" + currentUser;
         currentRoomRef = ref(db, 'messages/' + roomId);
 
-        // Включаем LIVE-прослушку новых сообщений из интернета
         onChildAdded(currentRoomRef, (snapshot) => {
             let data = snapshot.val();
             displayMessage(data.sender, data.text);
@@ -444,7 +554,6 @@
         area.scrollTop = area.scrollHeight;
     }
 
-    // Закидываем сообщение в интернет-облако
     function processSend() {
         let inputField = document.getElementById("message-input");
         let text = inputField.value.trim();
@@ -462,12 +571,15 @@
 
     function logout() {
         if (currentRoomRef) { off(currentRoomRef); }
+        if (globalRoomsListener) { off(ref(db, 'messages')); }
+        
+        localStorage.removeItem("kirikgram_logged_user"); // Стираем авто-вход
         currentUser = "";
         document.getElementById("confirm-modal").style.display = "none";
         showScreen('register-screen');
     }
 
-    // Привязка кликов к кнопкам (из-за правил модулей скрипта)
+    // Привязка кликов
     document.getElementById("reg-btn").onclick = handleRegister;
     document.getElementById("login-btn").onclick = handleLogin;
     document.getElementById("search-btn").onclick = handleSearch;
