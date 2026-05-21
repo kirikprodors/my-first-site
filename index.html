@@ -88,7 +88,6 @@
         #brand-title { font-size: 20px; font-weight: bold; color: #5288c1; }
         #logout-btn { background: none; border: none; color: #ff5555; cursor: pointer; font-size: 14px; }
 
-        /* Блок поиска */
         #search-box {
             padding: 10px 15px;
             border-bottom: 1px solid #2f2f2f;
@@ -114,11 +113,7 @@
             padding: 0 10px;
         }
 
-        /* Список чатов */
-        #chat-list {
-            flex: 1;
-            overflow-y: auto;
-        }
+        #chat-list { flex: 1; overflow-y: auto; }
         .no-chats-msg {
             padding: 20px;
             color: #aaaaaa;
@@ -136,7 +131,6 @@
         .chat-item:hover { background: #2c2c2c; }
         .chat-item.active { background: #2b5278; }
 
-        /* Правая часть чата */
         #main-chat { 
             flex: 1; 
             display: flex; 
@@ -175,6 +169,7 @@
             font-size: 15px; 
             word-wrap: break-word;
         }
+        .msg-inbound { background: #182533; align-self: flex-start; }
         .msg-outbound { background: #2b5278; align-self: flex-end; }
 
         #input-panel { 
@@ -204,7 +199,6 @@
             font-weight: bold; 
         }
 
-        /* МОДАЛКА ВЫХОДА */
         #confirm-modal {
             display: none;
             position: fixed;
@@ -235,29 +229,29 @@
     <input type="password" id="reg-pass" placeholder="Пароль">
     <input type="password" id="reg-confirm" placeholder="Подтвердите пароль">
     <div id="reg-error" class="error-msg"></div>
-    <button class="auth-btn" onclick="handleRegister()">Зарегистрироваться</button>
-    <div class="auth-link" onclick="showScreen('login-screen')">Already registered? Log in to KIRIKGRAM.</div>
+    <button class="auth-btn" id="reg-btn">Зарегистрироваться</button>
+    <div class="auth-link" id="link-to-login">Already registered? Log in to KIRIKGRAM.</div>
 </div>
 
 <div id="login-screen" class="auth-card">
-    <div class="back-arrow" onclick="showScreen('register-screen')">← Назад</div>
+    <div class="back-arrow" id="link-to-reg">← Назад</div>
     <h2>Log in to KIRIKGRAM</h2>
     <input type="text" id="login-name" placeholder="Имя">
     <input type="password" id="login-pass" placeholder="Пароль">
     <div id="login-error" class="error-msg"></div>
-    <button class="auth-btn" onclick="handleLogin()">Войти</button>
+    <button class="auth-btn" id="login-btn">Войти</button>
 </div>
 
 <div id="telegram-container">
     <div id="side-panel">
         <div id="brand-header">
             <div id="brand-title">KIRIKGRAM</div>
-            <button id="logout-btn" onclick="openLogoutModal()">Выйти</button>
+            <button id="logout-btn">Выйти</button>
         </div>
         
         <div id="search-box">
             <input type="text" id="search-input" placeholder="Найти друга по имени...">
-            <button id="search-btn" onclick="handleSearch()">Найти</button>
+            <button id="search-btn">Найти</button>
         </div>
         <div id="search-error" class="error-msg" style="text-align:center; font-size:12px; padding: 0 10px;"></div>
 
@@ -278,7 +272,7 @@
             <div id="messages-area"></div>
             <div id="input-panel">
                 <input type="text" id="message-input" placeholder="Написать сообщение...">
-                <button id="send-btn" onclick="processSend()">Отправить</button>
+                <button id="send-btn">Отправить</button>
             </div>
         </div>
     </div>
@@ -288,67 +282,100 @@
     <div class="modal-content">
         <p style="margin-top:0;">You really want to leave?</p>
         <div class="modal-btns">
-            <button class="modal-btn btn-yes" onclick="logout()">Yes</button>
-            <button class="modal-btn btn-no" onclick="closeLogoutModal()">No</button>
+            <button class="modal-btn btn-yes" id="modal-yes">Yes</button>
+            <button class="modal-btn btn-no" id="modal-no">No</button>
         </div>
     </div>
 </div>
 
-<script>
+<script type="module">
+    // Импортируем модули Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+    import { getDatabase, ref, set, get, child, push, onChildAdded, off } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+    // ТВОЙ ОФИЦИАЛЬНЫЙ КОНФИГ ИЗ СКРИНШОТА
+    const firebaseConfig = {
+        apiKey: "AIzaSyB86-UBtg14ECIK7rpUcYf3dwK4rBCcDiw",
+        authDomain: "kirikgram.firebaseapp.com",
+        databaseURL: "https://kirikgram-default-rtdb.europe-west1.firebasedatabase.app", // Добавил ссылку на европейскую базу данных
+        projectId: "kirikgram",
+        storageBucket: "kirikgram.firebasestorage.app",
+        messagingSenderId: "393237310761",
+        appId: "1:393237310761:web:cea334b035cf056b20db38",
+        measurementId: "G-J9YZ24CLJR"
+    };
+
+    // Инициализация
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+
     let currentUser = "";
     let currentChat = "";
     let activeChats = [];
+    let msgRef = null;
 
+    // Переключение экранов
     function showScreen(screenId) {
         document.getElementById("register-screen").style.display = "none";
         document.getElementById("login-screen").style.display = "none";
         document.getElementById("telegram-container").style.display = "none";
         
-        document.getElementById(screenId).style.display = screenId === 'telegram-container' ? 'flex' : 'block';
-        
-        document.getElementById("reg-error").innerText = "";
-        document.getElementById("login-error").innerText = "";
-        document.getElementById("search-error").innerText = "";
+        if (screenId === 'telegram-container') {
+            document.getElementById(screenId).style.display = 'flex';
+        } else {
+            document.getElementById(screenId).style.display = 'block';
+        }
     }
 
-    // Регистрация
-    function handleRegister() {
+    // Регистрация в облаке
+    async function handleRegister() {
         let name = document.getElementById("reg-name").value.trim();
         let pass = document.getElementById("reg-pass").value;
         let confirm = document.getElementById("reg-confirm").value;
         let errorDiv = document.getElementById("reg-error");
+        errorDiv.innerText = "";
 
-        if (!name || !pass || !confirm) {
-            errorDiv.innerText = "Заполните все поля!";
-            return;
-        }
-        if (pass !== confirm) {
-            errorDiv.innerText = "Пароли не совпадают!";
-            return;
-        }
+        if (!name || !pass || !confirm) { errorDiv.innerText = "Заполните все поля!"; return; }
+        if (pass !== confirm) { errorDiv.innerText = "Пароли не совпадают!"; return; }
 
-        localStorage.setItem("user_" + name, pass);
-        currentUser = name;
-        resetChatSystem();
-        showScreen('telegram-container');
+        try {
+            const dbRef = ref(database);
+            const snapshot = await get(child(dbRef, `users/${name}`));
+            
+            if (snapshot.exists()) {
+                errorDiv.innerText = "Это имя уже занято!";
+            } else {
+                await set(ref(database, 'users/' + name), { password: pass });
+                currentUser = name;
+                resetChatSystem();
+                showScreen('telegram-container');
+            }
+        } catch (e) {
+            errorDiv.innerText = "Ошибка сети! Проверьте правила Realtime Database.";
+        }
     }
 
-    // Вход
-    function handleLogin() {
+    // Вход по паролю из облака
+    async function handleLogin() {
         let name = document.getElementById("login-name").value.trim();
         let pass = document.getElementById("login-pass").value;
         let errorDiv = document.getElementById("login-error");
+        errorDiv.innerText = "";
 
-        let savedPassword = localStorage.getItem("user_" + name);
+        try {
+            const dbRef = ref(database);
+            const snapshot = await get(child(dbRef, `users/${name}`));
 
-        if (savedPassword === null || savedPassword !== pass) {
-            errorDiv.innerText = "Incorrect password!";
-            return;
+            if (snapshot.exists() && snapshot.val().password === pass) {
+                currentUser = name;
+                resetChatSystem();
+                showScreen('telegram-container');
+            } else {
+                errorDiv.innerText = "Incorrect password!";
+            }
+        } catch(e) {
+            errorDiv.innerText = "Ошибка входа!";
         }
-
-        currentUser = name;
-        resetChatSystem();
-        showScreen('telegram-container');
     }
 
     function resetChatSystem() {
@@ -360,43 +387,26 @@
             </div>`;
         document.getElementById("chat-view-placeholder").style.display = "flex";
         document.getElementById("chat-view-active").style.display = "none";
-        document.getElementById("search-input").value = "";
     }
 
-    // Поиск пользователей (Фикс логики)
-    function handleSearch() {
+    // Поиск друга в глобальной сети Firebase
+    async function handleSearch() {
         let searchInput = document.getElementById("search-input");
         let searchName = searchInput.value.trim();
         let errorDiv = document.getElementById("search-error");
-        
         errorDiv.innerText = "";
 
         if (searchName === "") return;
-        
         if (searchName.toLowerCase() === currentUser.toLowerCase()) {
-            errorDiv.innerText = "Нельзя создать чат с самим собой!";
+            errorDiv.innerText = "Нельзя общаться с самим собой!";
             return;
         }
 
-        // Проверяем точное совпадение ключа в localStorage
-        let savedPassword = localStorage.getItem("user_" + searchName);
+        const dbRef = ref(database);
+        const snapshot = await get(child(dbRef, `users/${searchName}`));
 
-        if (savedPassword !== null) {
-            if (!activeChats.includes(searchName)) {
-                activeChats.push(searchName);
-                
-                let notice = document.getElementById("empty-notice");
-                if (notice) notice.remove();
-                
-                let list = document.getElementById("chat-list");
-                let chatItem = document.createElement("div");
-                chatItem.className = "chat-item";
-                chatItem.id = "chat-item-" + searchName;
-                chatItem.innerText = searchName;
-                chatItem.onclick = function() { switchChat(searchName); };
-                list.appendChild(chatItem);
-            }
-            
+        if (snapshot.exists()) {
+            addChatToList(searchName);
             switchChat(searchName);
             searchInput.value = "";
         } else {
@@ -404,7 +414,26 @@
         }
     }
 
+    function addChatToList(chatName) {
+        if (!activeChats.includes(chatName)) {
+            activeChats.push(chatName);
+            let notice = document.getElementById("empty-notice");
+            if (notice) notice.remove();
+            
+            let list = document.getElementById("chat-list");
+            let chatItem = document.createElement("div");
+            chatItem.className = "chat-item";
+            chatItem.id = "chat-item-" + chatName;
+            chatItem.innerText = chatName;
+            chatItem.onclick = function() { switchChat(chatName); };
+            list.appendChild(chatItem);
+        }
+    }
+
+    // Переключение чата и запуск прослушивания сообщений в реальном времени
     function switchChat(chatName) {
+        if (msgRef) { off(msgRef); } // Выключаем старый чат
+
         currentChat = chatName;
         document.getElementById("chat-view-placeholder").style.display = "none";
         document.getElementById("chat-view-active").style.display = "flex";
@@ -412,48 +441,73 @@
         
         let items = document.getElementsByClassName("chat-item");
         for (let item of items) { item.classList.remove("active"); }
-        
         let activeItem = document.getElementById("chat-item-" + chatName);
         if (activeItem) activeItem.classList.add("active");
         
         document.getElementById("messages-area").innerHTML = "";
+
+        let roomId = currentUser < currentChat ? currentUser + "_" + currentChat : currentChat + "_" + currentUser;
+        
+        // Слушаем новые сообщения из этой комнаты
+        msgRef = ref(database, 'messages/' + roomId);
+        onChildAdded(msgRef, (snapshot) => {
+            let data = snapshot.val();
+            displayMessage(data.sender, data.text);
+        });
     }
 
+    function displayMessage(sender, text) {
+        let area = document.getElementById("messages-area");
+        let msgDiv = document.createElement("div");
+        msgDiv.className = sender === currentUser ? "message msg-outbound" : "message msg-inbound";
+        msgDiv.innerText = sender + ": " + text;
+        area.appendChild(msgDiv);
+        area.scrollTop = area.scrollHeight;
+    }
+
+    // Отправка в облако
     function processSend() {
         let inputField = document.getElementById("message-input");
-        let area = document.getElementById("messages-area");
+        let text = inputField.value.trim();
 
-        if (inputField.value.trim() !== "") {
-            let msgDiv = document.createElement("div");
-            msgDiv.className = "message msg-outbound";
-            msgDiv.innerText = currentUser + ": " + inputField.value;
-            
-            area.appendChild(msgDiv);
+        if (text !== "" && currentChat !== "") {
+            let roomId = currentUser < currentChat ? currentUser + "_" + currentChat : currentChat + "_" + currentUser;
+            const roomRef = ref(database, 'messages/' + roomId);
+            push(roomRef, {
+                sender: currentUser,
+                text: text
+            });
             inputField.value = "";
-            area.scrollTop = area.scrollHeight;
         }
     }
 
-    function openLogoutModal() { document.getElementById("confirm-modal").style.display = "flex"; }
-    function closeLogoutModal() { document.getElementById("confirm-modal").style.display = "none"; }
-    
+    // Логика модалки выхода
     function logout() {
+        if (msgRef) { off(msgRef); }
         currentUser = "";
-        closeLogoutModal();
+        document.getElementById("confirm-modal").style.display = "none";
         document.getElementById("reg-name").value = "";
         document.getElementById("reg-pass").value = "";
         document.getElementById("reg-confirm").value = "";
-        document.getElementById("login-name").value = "";
-        document.getElementById("login-pass").value = "";
         showScreen('register-screen');
     }
 
-    document.getElementById("message-input").addEventListener("keypress", function(e) {
-        if (e.key === "Enter") { processSend(); }
-    });
-    document.getElementById("search-input").addEventListener("keypress", function(e) {
-        if (e.key === "Enter") { handleSearch(); }
-    });
+    // Привязка событий к кнопкам
+    document.getElementById("reg-btn").onclick = handleRegister;
+    document.getElementById("login-btn").onclick = handleLogin;
+    document.getElementById("search-btn").onclick = handleSearch;
+    document.getElementById("send-btn").onclick = processSend;
+    
+    document.getElementById("link-to-login").onclick = () => showScreen('login-screen');
+    document.getElementById("link-to-reg").onclick = () => showScreen('register-screen');
+    
+    document.getElementById("logout-btn").onclick = () => document.getElementById("confirm-modal").style.display = "flex";
+    document.getElementById("modal-no").onclick = () => document.getElementById("confirm-modal").style.display = "none";
+    document.getElementById("modal-yes").onclick = logout;
+
+    // Слушатели клавиши Enter
+    document.getElementById("message-input").addEventListener("keypress", (e) => { if (e.key === "Enter") processSend(); });
+    document.getElementById("search-input").addEventListener("keypress", (e) => { if (e.key === "Enter") handleSearch(); });
 </script>
 
 </body>
