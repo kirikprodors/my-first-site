@@ -135,9 +135,10 @@
         .msg-inbound { background: #182533; align-self: flex-start; }
         .msg-outbound { background: #2b5278; align-self: flex-end; }
 
-        #input-panel { padding: 15px; background: #212121; display: flex; gap: 10px; }
+        #input-panel { padding: 15px; background: #212121; display: flex; gap: 10px; align-items: center; }
         #message-input { flex: 1; padding: 12px; background: #181818; border: 1px solid #2f2f2f; border-radius: 8px; color: white; outline: none; }
-        #send-btn { padding: 0 20px; background: #5288c1; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        #send-btn { padding: 12px 20px; background: #5288c1; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        #mute-status-text { color: #ff5555; font-size: 14px; display: none; width: 100%; text-align: center; font-weight: bold; }
 
         /* МОДАЛКИ */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 10; }
@@ -145,15 +146,34 @@
         .modal-btns { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; }
         .modal-btn { padding: 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: white; }
         .btn-danger { background: #ff5555; }
+        .btn-warning { background: #e09926; }
         .btn-primary { background: #5288c1; }
         .btn-secondary { background: #444; }
 
+        /* ОКНО ЭКРАНА БАНА */
+        #banned-screen { background: #212121; padding: 40px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); width: 360px; text-align: center; display: none; }
+        #banned-screen h2 { color: #ff5555; margin-top: 0; }
+        #banned-details { background: #181818; border: 1px solid #333; padding: 15px; border-radius: 8px; text-align: left; font-size: 14px; margin: 15px 0; line-height: 1.5; }
+
         /* ОКНО АДМИНКИ */
-        #admin-modal .modal-content { width: 400px; max-height: 80vh; overflow-y: auto; text-align: left; }
-        .admin-user-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #333; }
+        #admin-modal .modal-content { width: 450px; max-height: 80vh; overflow-y: auto; text-align: left; }
+        .admin-user-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #333; }
+        .admin-actions-group { display: flex; gap: 5px; }
+        .admin-input-small { background: #181818; border: 1px solid #333; color: white; padding: 4px; border-radius: 4px; width: 100%; margin-top: 5px; font-size: 13px; box-sizing: border-box; }
     </style>
 </head>
 <body>
+
+<div id="banned-screen">
+    <h2>Вы были забанены!</h2>
+    <div id="banned-details">
+        <div><b>Администратор:</b> <span id="ban-admin-name">...</span></div>
+        <div><b>Срок бана:</b> <span id="ban-duration">...</span> дн.</div>
+        <div><b>Причина:</b> <span id="ban-reason">...</span></div>
+    </div>
+    <p style="font-size: 14px; color: #aaa;">Пожалуйста, создайте новый аккаунт, чтобы продолжить использование.</p>
+    <button class="auth-btn" id="ban-create-new-btn">Создать новый аккаунт</button>
+</div>
 
 <div id="register-screen" class="auth-card">
     <h2>Welcome to KIRIKGRAM</h2>
@@ -206,6 +226,7 @@
             <div id="input-panel">
                 <input type="text" id="message-input" placeholder="Написать сообщение...">
                 <button id="send-btn">Отправить</button>
+                <div id="mute-status-text">Вы замучены</div>
             </div>
         </div>
     </div>
@@ -224,15 +245,21 @@
 <div id="msg-options-modal" class="modal">
     <div class="modal-content">
         <p style="margin-top:0; font-weight:bold;">Управление сообщением</p>
-        <div class="modal-btns" id="msg-modal-actions">
-            </div>
+        <div class="modal-btns" id="msg-modal-actions"></div>
     </div>
 </div>
 
 <div id="admin-modal" class="modal">
     <div class="modal-content">
-        <h3 style="margin-top:0; color:#5288c1;">Управление аккаунтами (Admin)</h3>
-        <div id="admin-users-list" style="max-height: 250px; overflow-y:auto; margin-bottom: 15px;">
+        <h3 style="margin-top:0; color:#5288c1;">Управление (Панель Администратора)</h3>
+        
+        <div style="background:#181818; padding: 10px; border-radius: 6px; margin-bottom: 10px;">
+            <span style="font-size: 13px; color:#aaa;">Настройки для бана/мута:</span>
+            <input type="text" id="admin-reason-input" class="admin-input-small" placeholder="Причина (оскорбления, спам...)">
+            <input type="number" id="admin-time-input" class="admin-input-small" placeholder="Время (для бана в днях, для мута в минутах)" value="1">
+        </div>
+
+        <div id="admin-users-list" style="max-height: 230px; overflow-y:auto; margin-bottom: 15px;">
             </div>
         <button class="modal-btn btn-secondary" style="width:100%" id="close-admin-btn">Закрыть</button>
     </div>
@@ -261,13 +288,15 @@
     let hiddenChats = JSON.parse(localStorage.getItem("kirikgram_hidden_chats") || "[]");
     let currentRoomRef = null;
     let globalRoomsListener = null;
+    let userStatusListener = null;
     let selectedMsgId = null;
+    let adminsList = ["KIRIK"]; // Сюда позже можно дописывать имена других админов
 
     window.addEventListener('DOMContentLoaded', () => {
         let savedUser = localStorage.getItem("kirikgram_logged_user");
         if (savedUser) {
             currentUser = savedUser;
-            startChatSystem();
+            checkBanAndStart();
         } else {
             showScreen('register-screen');
         }
@@ -277,7 +306,67 @@
         document.getElementById("register-screen").style.display = "none";
         document.getElementById("login-screen").style.display = "none";
         document.getElementById("telegram-container").style.display = "none";
-        document.getElementById(screenId).style.display = screenId === 'telegram-container' ? 'flex' : 'block';
+        document.getElementById("banned-screen").style.display = "none";
+        
+        if (screenId === 'telegram-container') document.getElementById(screenId).style.display = 'flex';
+        else document.getElementById(screenId).style.display = 'block';
+    }
+
+    // ПРОВЕРКА НА БАН И СТАРТ СИСТЕМЫ
+    function checkBanAndStart() {
+        if (userStatusListener) off(ref(db, 'users/' + currentUser));
+
+        // LIVE-Слежка за статусом текущего аккаунта в базе данных
+        userStatusListener = onValue(ref(db, 'users/' + currentUser), (snapshot) => {
+            if (!snapshot.exists()) {
+                // Если аккаунт удалили из базы пока мы сидели в чате
+                if (currentUser) {
+                    forceLogoutToRegister();
+                }
+                return;
+            }
+
+            let userData = snapshot.val();
+
+            // Проверяем бан
+            if (userData.banned) {
+                if (currentRoomRef) off(currentRoomRef);
+                if (globalRoomsListener) off(ref(db, 'messages'));
+                
+                document.getElementById("ban-admin-name").innerText = userData.bannedBy || "Admin";
+                document.getElementById("ban-duration").innerText = userData.banDays || "1";
+                document.getElementById("ban-reason").innerText = userData.banReason || "Нарушение правил";
+                showScreen("banned-screen");
+                return;
+            }
+
+            // Проверяем мут (постоянное обновление интерфейса)
+            checkMuteStatus(userData.mutedUntil, userData.muteReason);
+
+            // Если всё чисто и мы ещё не зашли в интерфейс чата
+            if (document.getElementById("telegram-container").style.display !== "flex" && document.getElementById("banned-screen").style.display !== "block") {
+                startChatSystem();
+            }
+        });
+    }
+
+    function checkMuteStatus(mutedUntil, reason) {
+        let inputField = document.getElementById("message-input");
+        let sendBtn = document.getElementById("send-btn");
+        let muteText = document.getElementById("mute-status-text");
+
+        if (mutedUntil && mutedUntil > Date.now()) {
+            inputField.style.display = "none";
+            sendBtn.style.display = "none";
+            
+            let timeLeft = Math.ceil((mutedUntil - Date.now()) / 60000);
+            muteText.innerText = `Вы замучены ещё на ${timeLeft} мин. Причина: ${reason || "Без причины"}`;
+            muteText.style.display = "block";
+        } else {
+            inputField.style.display = "block";
+            sendBtn.style.display = "block";
+            muteText.style.display = "none";
+        }
     }
 
     function handleRegister() {
@@ -288,12 +377,13 @@
 
         if (!name || !pass || !confirm) { errorDiv.innerText = "Заполните все поля!"; return; }
         if (pass !== confirm) { errorDiv.innerText = "Пароли не совпадают!"; return; }
+        if (adminsList.includes(name) && name !== "KIRIK") { errorDiv.innerText = "Имя зарезервировано!"; return; }
 
         get(ref(db, 'users/' + name)).then((snapshot) => {
             if (snapshot.exists()) {
                 errorDiv.innerText = "Это имя уже занято!";
             } else {
-                set(ref(db, 'users/' + name), { password: pass }).then(() => {
+                set(ref(db, 'users/' + name), { password: pass, banned: false }).then(() => {
                     saveUserAndLogin(name);
                 });
             }
@@ -306,10 +396,15 @@
         let errorDiv = document.getElementById("login-error");
 
         get(ref(db, 'users/' + name)).then((snapshot) => {
-            if (snapshot.exists() && snapshot.val().password === pass) {
-                saveUserAndLogin(name);
+            if (snapshot.exists()) {
+                let uData = snapshot.val();
+                if (uData.password === pass) {
+                    saveUserAndLogin(name);
+                } else {
+                    errorDiv.innerText = "Incorrect password!";
+                }
             } else {
-                errorDiv.innerText = "Incorrect password!";
+                errorDiv.innerText = "Пользователь не найден!";
             }
         });
     }
@@ -317,23 +412,27 @@
     function saveUserAndLogin(name) {
         currentUser = name;
         localStorage.setItem("kirikgram_logged_user", name);
-        startChatSystem();
+        checkBanAndStart();
     }
 
     function startChatSystem() {
         showScreen('telegram-container');
         resetChatUI();
-        checkAdminStatus();
+        checkAdminButton();
         listenToIncomingChats();
     }
 
-    function checkAdminStatus() {
-        // Защищенная проверка админа прямо через защищенные ключи Firebase
+    function checkAdminButton() {
         get(ref(db, 'users/KIRIK')).then((snapshot) => {
-            if (snapshot.exists() && currentUser === "KIRIK" && snapshot.val().password === "KIRIK_OWNER345543") {
+            if (snapshot.exists() && snapshot.val().password === "KIRIK_OWNER345543" && currentUser === "KIRIK") {
                 document.getElementById("admin-panel-btn").style.display = "block";
             } else {
-                document.getElementById("admin-panel-btn").style.display = "none";
+                // Если ты добавишь новые админ-аккаунты в базу, здесь можно расширить проверку
+                if (adminsList.includes(currentUser) && currentUser !== "KIRIK") {
+                    document.getElementById("admin-panel-btn").style.display = "block";
+                } else {
+                    document.getElementById("admin-panel-btn").style.display = "none";
+                }
             }
         });
     }
@@ -356,7 +455,7 @@
 
         get(ref(db, 'users/' + searchName)).then((snapshot) => {
             if (snapshot.exists()) {
-                // Если чат был скрыт, возвращаем его
+                if (snapshot.val().banned) { errorDiv.innerText = "Этот пользователь забанен!"; return; }
                 hiddenChats = hiddenChats.filter(c => c !== searchName);
                 localStorage.setItem("kirikgram_hidden_chats", JSON.stringify(hiddenChats));
                 
@@ -381,14 +480,13 @@
                     let parts = roomId.split("_");
                     let partner = parts[0] === currentUser ? parts[1] : parts[0];
 
-                    if (hiddenChats.includes(partner)) continue; // Пропускаем скрытые чаты
+                    if (hiddenChats.includes(partner)) continue;
 
                     let messages = Object.entries(allRooms[roomId]);
                     if(messages.length === 0) continue;
                     
                     let [lastId, lastMessageObj] = messages[messages.length - 1];
 
-                    // ФИКС БАГА: Считаем только ВХОДЯЩИЕ сообщения от партнёра
                     let unreadCount = 0;
                     if (partner !== currentChat) {
                         unreadCount = messages.filter(([id, m]) => m.sender === partner).length; 
@@ -423,17 +521,12 @@
                 <span class="delete-chat-btn" id="del-chat-${partner}">&times;</span>
             `;
             
-            // Нажатие на сам чат
-            chatItem.onclick = (e) => {
-                if(e.target.className !== 'delete-chat-btn') switchChat(partner);
-            };
-            
+            chatItem.onclick = (e) => { if(e.target.className !== 'delete-chat-btn') switchChat(partner); };
             list.appendChild(chatItem);
 
-            // Кнопка удаления чата (скрыть для себя)
             document.getElementById(`del-chat-${partner}`).onclick = (e) => {
                 e.stopPropagation();
-                if(confirm(`Скрыть чат с ${partner}? Переписка останется в базе.`)) {
+                if(confirm(`Скрыть чат с ${partner}?`)) {
                     hiddenChats.push(partner);
                     localStorage.setItem("kirikgram_hidden_chats", JSON.stringify(hiddenChats));
                     document.getElementById("chat-item-" + partner).remove();
@@ -473,10 +566,7 @@
         let roomId = currentUser < currentChat ? currentUser + "_" + currentChat : currentChat + "_" + currentUser;
         currentRoomRef = ref(db, 'messages/' + roomId);
 
-        onChildAdded(currentRoomRef, (snapshot) => {
-            displayMessage(snapshot.key, snapshot.val());
-        });
-
+        onChildAdded(currentRoomRef, (snapshot) => { displayMessage(snapshot.key, snapshot.val()); });
         onChildRemoved(currentRoomRef, (snapshot) => {
             let el = document.getElementById("msg-" + snapshot.key);
             if(el) el.remove();
@@ -485,8 +575,6 @@
 
     function displayMessage(msgId, msgObj) {
         let area = document.getElementById("messages-area");
-        
-        // Если сообщение удалено локально текущим юзером
         let deletedLocally = JSON.parse(localStorage.getItem(`deleted_msg_${msgId}`) || "false");
         if (deletedLocally) return;
 
@@ -494,40 +582,34 @@
         msgDiv.className = msgObj.sender === currentUser ? "message msg-outbound" : "message msg-inbound";
         msgDiv.id = "msg-" + msgId;
         msgDiv.innerText = msgObj.sender + ": " + msgObj.text;
-        
-        // Клик по сообщению (Опции удаления)
         msgDiv.onclick = () => openMessageOptions(msgId, msgObj.sender);
 
         area.appendChild(msgDiv);
         area.scrollTop = area.scrollHeight;
     }
 
-    // ОКНО УДАЛЕНИЯ СООБЩЕНИЙ
     function openMessageOptions(msgId, sender) {
         selectedMsgId = msgId;
         let container = document.getElementById("msg-modal-actions");
         container.innerHTML = "";
 
         let isMe = sender === currentUser;
-        let isAdmin = currentUser === "KIRIK";
+        let isAdmin = adminsList.includes(currentUser);
 
         if (isMe || isAdmin) {
-            // Кнопка удаления у всех
             let btnAll = document.createElement("button");
             btnAll.className = "modal-btn btn-danger";
             btnAll.innerText = isAdmin && !isMe ? "Удалить для всех (Админ)" : "Удалить для всех";
             btnAll.onclick = deleteMessageForEveryone;
-            container.innerHTML += btnAll.outerHTML;
+            container.appendChild(btnAll);
         }
 
-        // Кнопка удаления только у себя
         let btnSelf = document.createElement("button");
         btnSelf.className = "modal-btn btn-primary";
         btnSelf.innerText = "Удалить у себя";
         btnSelf.onclick = deleteMessageForSelf;
         container.appendChild(btnSelf);
 
-        // Кнопка отмены
         let btnCancel = document.createElement("button");
         btnCancel.className = "modal-btn btn-secondary";
         btnCancel.innerText = "Отмена";
@@ -565,48 +647,101 @@
         }
     }
 
-    // АДМИН ПАНЕЛЬ
+    // АДМИН-ПАНЕЛЬ (ЛОГИКА БАНА И МУТА)
     document.getElementById("admin-panel-btn").onclick = () => {
         let listContainer = document.getElementById("admin-users-list");
-        listContainer.innerHTML = "Загрузка...";
+        listContainer.innerHTML = "Загрузка юзеров...";
         document.getElementById("admin-modal").style.display = "flex";
 
         get(ref(db, 'users')).then((snapshot) => {
             listContainer.innerHTML = "";
             if(!snapshot.exists()) return;
             
-            Object.keys(snapshot.val()).forEach(username => {
-                if(username === "KIRIK") return; // Самого админа удалить нельзя
+            Object.entries(snapshot.val()).forEach(([username, uData]) => {
+                if(username === "KIRIK" || username === currentUser) return; 
 
                 let item = document.createElement("div");
                 item.className = "admin-user-item";
+                
+                let isBanned = uData.banned === true;
+                let isMuted = uData.mutedUntil && uData.mutedUntil > Date.now();
+
                 item.innerHTML = `
-                    <span>👤 <b>${username}</b></span>
-                    <button class="modal-btn btn-danger" style="padding: 4px 10px; font-size:12px;">Бан / Удалить</button>
+                    <div style="display:flex; flex-direction:column;">
+                        <span>👤 <b>${username}</b></span>
+                        <span style="font-size:11px; color:#aaa;">
+                            ${isBanned ? '🛑 ЗАБАНЕН' : (isMuted ? '🔇 В МУТЕ' : '🟢 Активен')}
+                        </span>
+                    </div>
+                    <div class="admin-actions-group">
+                        <button class="modal-btn btn-danger" style="padding:5px 8px; font-size:11px;" id="ban-btn-${username}">
+                            ${isBanned ? 'Разбан' : 'Бан'}
+                        </button>
+                        <button class="modal-btn btn-warning" style="padding:5px 8px; font-size:11px;" id="mute-btn-${username}">
+                            ${isMuted ? 'Размут' : 'Мут'}
+                        </button>
+                    </div>
                 `;
-                // Клик на удаление юзера админом
-                item.querySelector('button').onclick = () => {
-                    if(confirm(`Вы уверены, что хотите полностью УДАЛИТЬ аккаунт ${username}?`)) {
-                        remove(ref(db, 'users/' + username)).then(() => {
-                            item.remove();
-                        });
+
+                listContainer.appendChild(item);
+
+                // ЛОГИКА НАЖАТИЯ НА КНОПКУ БАНА
+                document.getElementById(`ban-btn-${username}`).onclick = () => {
+                    let reason = document.getElementById("admin-reason-input").value.trim() || "Нарушение правил проекта";
+                    let days = parseInt(document.getElementById("admin-time-input").value) || 1;
+
+                    if (isBanned) {
+                        set(ref(db, `users/${username}/banned`), false).then(() => document.getElementById("admin-panel-btn").click());
+                    } else {
+                        if(confirm(`Забанить ${username} на ${days} дн.?`)) {
+                            set(ref(db, `users/${username}`), {
+                                password: uData.password,
+                                banned: true,
+                                bannedBy: currentUser, // Записываем, какой именно админ забанил!
+                                banDays: days,
+                                banReason: reason
+                            }).then(() => document.getElementById("admin-panel-btn").click());
+                        }
                     }
                 };
-                listContainer.appendChild(item);
+
+                // ЛОГИКА НАЖАТИЯ НА КНОПКУ МУТА
+                document.getElementById(`mute-btn-${username}`).onclick = () => {
+                    let reason = document.getElementById("admin-reason-input").value.trim() || "Флуд / Спам";
+                    let minutes = parseInt(document.getElementById("admin-time-input").value) || 5;
+
+                    if (isMuted) {
+                        // Снимаем мут (затираем время)
+                        set(ref(db, `users/${username}/mutedUntil`), 0).then(() => document.getElementById("admin-panel-btn").click());
+                    } else {
+                        if(confirm(`Выдать мут ${username} на ${minutes} мин.?`)) {
+                            let mutedUntilTimestamp = Date.now() + (minutes * 60000); // Переводим минуты в миллисекунды
+                            set(ref(db, `users/${username}/mutedUntil`), mutedUntilTimestamp);
+                            set(ref(db, `users/${username}/muteReason`), reason).then(() => document.getElementById("admin-panel-btn").click());
+                        }
+                    }
+                };
             });
         });
     };
 
-    function logout() {
-        if (currentRoomRef) { off(currentRoomRef); }
-        if (globalRoomsListener) { off(ref(db, 'messages')); }
+    function forceLogoutToRegister() {
+        if (currentRoomRef) off(currentRoomRef);
+        if (globalRoomsListener) off(ref(db, 'messages'));
+        if (userStatusListener) off(ref(db, 'users/' + currentUser));
+        
         localStorage.removeItem("kirikgram_logged_user");
         currentUser = "";
-        document.getElementById("confirm-modal").style.display = "none";
+        resetChatUI();
         showScreen('register-screen');
     }
 
-    // Привязка действий
+    function logout() {
+        forceLogoutToRegister();
+        document.getElementById("confirm-modal").style.display = "none";
+    }
+
+    // Привязка кнопок
     document.getElementById("reg-btn").onclick = handleRegister;
     document.getElementById("login-btn").onclick = handleLogin;
     document.getElementById("search-btn").onclick = handleSearch;
@@ -617,8 +752,12 @@
     document.getElementById("to-login-link").onclick = () => showScreen('login-screen');
     document.getElementById("back-to-reg").onclick = () => showScreen('register-screen');
     document.getElementById("close-admin-btn").onclick = () => document.getElementById("admin-modal").style.display = "none";
+    
+    // Кнопка «Создать новый аккаунт» на экране бана
+    document.getElementById("ban-create-new-btn").onclick = () => {
+        forceLogoutToRegister();
+    };
 
-    // Фикс обработчика кликов для динамических кнопок в модалке сообщений
     document.getElementById("msg-options-modal").onclick = (e) => {
         if(e.target.id === "msg-options-modal") document.getElementById("msg-options-modal").style.display = "none";
     };
