@@ -49,20 +49,14 @@
             margin-top: 10px;
         }
         .auth-btn:hover { background: #659bd6; }
-        .auth-link {
-            color: #5288c1;
-            margin-top: 15px;
-            cursor: pointer;
-            font-size: 14px;
-            display: inline-block;
-        }
+        .auth-link { color: #5288c1; margin-top: 15px; cursor: pointer; font-size: 14px; display: inline-block; }
         .error-msg { color: #ff5555; font-size: 14px; margin-top: 5px; min-height: 18px; }
         .back-arrow { text-align: left; cursor: pointer; color: #5288c1; font-size: 18px; margin-bottom: 10px; }
 
         /* ИНТЕРФЕЙС ЧАТА */
         #telegram-container { 
             display: none; 
-            width: 800px; 
+            width: 850px; 
             height: 600px; 
             background: #212121; 
             border-radius: 12px; 
@@ -71,7 +65,7 @@
         }
 
         #side-panel { 
-            width: 280px; 
+            width: 300px; 
             background: #1e1e1e; 
             border-right: 1px solid #2f2f2f; 
             display: flex; 
@@ -86,43 +80,17 @@
             border-bottom: 1px solid #2f2f2f;
         }
         #brand-title { font-size: 20px; font-weight: bold; color: #5288c1; }
+        #admin-panel-btn { background: #a67c00; border: none; color: white; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; display: none; }
         #logout-btn { background: none; border: none; color: #ff5555; cursor: pointer; font-size: 14px; }
 
-        #search-box {
-            padding: 10px 15px;
-            border-bottom: 1px solid #2f2f2f;
-            display: flex;
-            gap: 5px;
-        }
-        #search-input {
-            flex: 1;
-            padding: 6px 10px;
-            background: #181818;
-            border: 1px solid #2f2f2f;
-            border-radius: 5px;
-            color: white;
-            outline: none;
-            font-size: 14px;
-        }
-        #search-btn {
-            background: #5288c1;
-            border: none;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-            padding: 0 10px;
-        }
+        #search-box { padding: 10px 15px; border-bottom: 1px solid #2f2f2f; display: flex; gap: 5px; }
+        #search-input { flex: 1; padding: 6px 10px; background: #181818; border: 1px solid #2f2f2f; border-radius: 5px; color: white; outline: none; font-size: 14px; }
+        #search-btn { background: #5288c1; border: none; color: white; border-radius: 5px; cursor: pointer; padding: 0 10px; }
 
         #chat-list { flex: 1; overflow-y: auto; }
-        .no-chats-msg {
-            padding: 20px;
-            color: #aaaaaa;
-            font-size: 14px;
-            text-align: center;
-            line-height: 1.4;
-        }
+        .no-chats-msg { padding: 20px; color: #aaaaaa; font-size: 14px; text-align: center; line-height: 1.4; }
 
-        /* Дизайн элементов чата слева */
+        /* ЭЛЕМЕНТЫ ЧАТА */
         .chat-item { 
             padding: 12px 15px; 
             cursor: pointer; 
@@ -131,125 +99,58 @@
             display: flex;
             flex-direction: column;
             gap: 4px;
+            position: relative;
         }
         .chat-item:hover { background: #2c2c2c; }
         .chat-item.active { background: #2b5278; }
         
-        .chat-item-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        .chat-item-top { display: flex; justify-content: space-between; align-items: center; padding-right: 20px; }
         .chat-item-name { font-weight: bold; font-size: 15px; color: #fff; }
         
-        .chat-item-bottom {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-        }
+        .chat-item-bottom { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
         .chat-item-lastmsg { font-size: 13px; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
         
-        /* Зеленый кружок непрочитанных */
-        .badge {
-            background: #4f9e5c;
-            color: white;
-            font-size: 11px;
-            font-weight: bold;
-            padding: 2px 7px;
-            border-radius: 10px;
-            min-width: 10px;
-            text-align: center;
-        }
+        .badge { background: #4f9e5c; color: white; font-size: 11px; font-weight: bold; padding: 2px 7px; border-radius: 10px; text-align: center; }
+        .delete-chat-btn { position: absolute; right: 10px; top: 14px; color: #ff5555; font-size: 16px; display: none; cursor: pointer; }
+        .chat-item:hover .delete-chat-btn { display: block; }
 
-        #main-chat { 
-            flex: 1; 
-            display: flex; 
-            flex-direction: column; 
-            background: #17212b; 
-        }
+        #main-chat { flex: 1; display: flex; flex-direction: column; background: #17212b; }
+        #chat-header { padding: 15px 20px; background: #212121; font-weight: bold; border-bottom: 1px solid #2f2f2f; }
+        #messages-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
 
-        #chat-header { 
-            padding: 15px 20px; 
-            background: #212121; 
-            font-weight: bold; 
-            border-bottom: 1px solid #2f2f2f;
-        }
+        .chat-placeholder { display: flex; justify-content: center; align-items: center; height: 100%; color: #777; }
 
-        #messages-area { 
-            flex: 1; 
-            padding: 20px; 
-            overflow-y: auto; 
-            display: flex; 
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .chat-placeholder {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100%;
-            color: #777;
-        }
-
+        /* СООБЩЕНИЯ */
         .message { 
             max-width: 70%; 
             padding: 10px 14px; 
             border-radius: 10px; 
             font-size: 15px; 
             word-wrap: break-word;
+            cursor: pointer;
+            position: relative;
+            transition: opacity 0.2s;
         }
+        .message:hover { filter: brightness(1.2); }
         .msg-inbound { background: #182533; align-self: flex-start; }
         .msg-outbound { background: #2b5278; align-self: flex-end; }
 
-        #input-panel { 
-            padding: 15px; 
-            background: #212121; 
-            display: flex; 
-            gap: 10px; 
-        }
+        #input-panel { padding: 15px; background: #212121; display: flex; gap: 10px; }
+        #message-input { flex: 1; padding: 12px; background: #181818; border: 1px solid #2f2f2f; border-radius: 8px; color: white; outline: none; }
+        #send-btn { padding: 0 20px; background: #5288c1; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
 
-        #message-input { 
-            flex: 1; 
-            padding: 12px; 
-            background: #181818; 
-            border: 1px solid #2f2f2f; 
-            border-radius: 8px; 
-            color: white; 
-            outline: none;
-        }
+        /* МОДАЛКИ */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 10; }
+        .modal-content { background: #212121; padding: 25px; border-radius: 10px; text-align: center; width: 280px; }
+        .modal-btns { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; }
+        .modal-btn { padding: 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: white; }
+        .btn-danger { background: #ff5555; }
+        .btn-primary { background: #5288c1; }
+        .btn-secondary { background: #444; }
 
-        #send-btn { 
-            padding: 0 20px; 
-            background: #5288c1; 
-            color: white; 
-            border: none; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-weight: bold; 
-        }
-
-        #confirm-modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7);
-            justify-content: center;
-            align-items: center;
-            z-index: 10;
-        }
-        .modal-content {
-            background: #212121;
-            padding: 25px;
-            border-radius: 10px;
-            text-align: center;
-            width: 260px;
-        }
-        .modal-btns { display: flex; justify-content: space-around; margin-top: 15px; }
-        .modal-btn { padding: 8px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .btn-yes { background: #ff5555; color: white; }
-        .btn-no { background: #5288c1; color: white; }
+        /* ОКНО АДМИНКИ */
+        #admin-modal .modal-content { width: 400px; max-height: 80vh; overflow-y: auto; text-align: left; }
+        .admin-user-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #333; }
     </style>
 </head>
 <body>
@@ -277,6 +178,7 @@
     <div id="side-panel">
         <div id="brand-header">
             <div id="brand-title">KIRIKGRAM</div>
+            <button id="admin-panel-btn">Админка</button>
             <button id="logout-btn">Выйти</button>
         </div>
         
@@ -302,26 +204,43 @@
             <div id="chat-header">Чат: ...</div>
             <div id="messages-area"></div>
             <div id="input-panel">
-                <input type="text" id="message-input" placeholder="Написать message...">
+                <input type="text" id="message-input" placeholder="Написать сообщение...">
                 <button id="send-btn">Отправить</button>
             </div>
         </div>
     </div>
 </div>
 
-<div id="confirm-modal">
+<div id="confirm-modal" class="modal">
     <div class="modal-content">
         <p style="margin-top:0;">You really want to leave?</p>
-        <div class="modal-btns">
-            <button class="modal-btn btn-yes" id="confirm-logout-yes">Yes</button>
-            <button class="modal-btn btn-no" id="confirm-logout-no">No</button>
+        <div style="display:flex; justify-content: space-around;">
+            <button class="modal-btn btn-danger" id="confirm-logout-yes">Yes</button>
+            <button class="modal-btn btn-primary" id="confirm-logout-no">No</button>
         </div>
+    </div>
+</div>
+
+<div id="msg-options-modal" class="modal">
+    <div class="modal-content">
+        <p style="margin-top:0; font-weight:bold;">Управление сообщением</p>
+        <div class="modal-btns" id="msg-modal-actions">
+            </div>
+    </div>
+</div>
+
+<div id="admin-modal" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top:0; color:#5288c1;">Управление аккаунтами (Admin)</h3>
+        <div id="admin-users-list" style="max-height: 250px; overflow-y:auto; margin-bottom: 15px;">
+            </div>
+        <button class="modal-btn btn-secondary" style="width:100%" id="close-admin-btn">Закрыть</button>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-    import { getDatabase, ref, set, get, child, push, onChildAdded, off, onValue } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
+    import { getDatabase, ref, set, get, remove, push, onChildAdded, onChildRemoved, off, onValue } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyB86-UBtg14ECIK7rpUcYf3dwK4rBCcDiw",
@@ -338,11 +257,12 @@
 
     let currentUser = "";
     let currentChat = "";
-    let activeChats = {}; // Словарь для отслеживания чатов и их данных
+    let activeChats = {}; 
+    let hiddenChats = JSON.parse(localStorage.getItem("kirikgram_hidden_chats") || "[]");
     let currentRoomRef = null;
     let globalRoomsListener = null;
+    let selectedMsgId = null;
 
-    // ПРОВЕРКА АВТО-ВХОДА ПРИ СТАРТЕ
     window.addEventListener('DOMContentLoaded', () => {
         let savedUser = localStorage.getItem("kirikgram_logged_user");
         if (savedUser) {
@@ -369,8 +289,7 @@
         if (!name || !pass || !confirm) { errorDiv.innerText = "Заполните все поля!"; return; }
         if (pass !== confirm) { errorDiv.innerText = "Пароли не совпадают!"; return; }
 
-        const userRef = ref(db, 'users/' + name);
-        get(userRef).then((snapshot) => {
+        get(ref(db, 'users/' + name)).then((snapshot) => {
             if (snapshot.exists()) {
                 errorDiv.innerText = "Это имя уже занято!";
             } else {
@@ -397,28 +316,36 @@
 
     function saveUserAndLogin(name) {
         currentUser = name;
-        localStorage.setItem("kirikgram_logged_user", name); // Запоминаем браузер
+        localStorage.setItem("kirikgram_logged_user", name);
         startChatSystem();
     }
 
     function startChatSystem() {
         showScreen('telegram-container');
         resetChatUI();
+        checkAdminStatus();
         listenToIncomingChats();
+    }
+
+    function checkAdminStatus() {
+        // Защищенная проверка админа прямо через защищенные ключи Firebase
+        get(ref(db, 'users/KIRIK')).then((snapshot) => {
+            if (snapshot.exists() && currentUser === "KIRIK" && snapshot.val().password === "KIRIK_OWNER345543") {
+                document.getElementById("admin-panel-btn").style.display = "block";
+            } else {
+                document.getElementById("admin-panel-btn").style.display = "none";
+            }
+        });
     }
 
     function resetChatUI() {
         activeChats = {};
         currentChat = "";
-        document.getElementById("chat-list").innerHTML = `
-            <div class="no-chats-msg" id="empty-notice">
-                You don't have a chat history, please find your chat partners in the search.
-            </div>`;
+        document.getElementById("chat-list").innerHTML = `<div class="no-chats-msg" id="empty-notice">You don't have a chat history...</div>`;
         document.getElementById("chat-view-placeholder").style.display = "flex";
         document.getElementById("chat-view-active").style.display = "none";
     }
 
-    // ПОИСК ПОЛЬЗОВАТЕЛЯ
     function handleSearch() {
         let searchInput = document.getElementById("search-input");
         let searchName = searchInput.value.trim();
@@ -429,7 +356,11 @@
 
         get(ref(db, 'users/' + searchName)).then((snapshot) => {
             if (snapshot.exists()) {
-                addChatToList(searchName);
+                // Если чат был скрыт, возвращаем его
+                hiddenChats = hiddenChats.filter(c => c !== searchName);
+                localStorage.setItem("kirikgram_hidden_chats", JSON.stringify(hiddenChats));
+                
+                updateChatUI(searchName, "Нет сообщений", 0);
                 switchChat(searchName);
                 searchInput.value = "";
             } else {
@@ -438,34 +369,31 @@
         });
     }
 
-    // СЛЕЖКА ЗА ВСЕМИ КОМНАТАМИ В ОБЛАКЕ (чтобы ловить входящие сообщения)
     function listenToIncomingChats() {
         if (globalRoomsListener) { off(ref(db, 'messages')); }
 
         globalRoomsListener = onValue(ref(db, 'messages'), (snapshot) => {
-            if (!snapshot.exists()) return;
+            if (!snapshot.exists()) { resetChatUI(); return; }
             
             const allRooms = snapshot.val();
             for (let roomId in allRooms) {
-                // Проверяем, относится ли комната к текущему пользователю
                 if (roomId.includes(currentUser)) {
                     let parts = roomId.split("_");
                     let partner = parts[0] === currentUser ? parts[1] : parts[0];
 
-                    // Получаем массив сообщений комнаты
-                    let messages = Object.values(allRooms[roomId]);
-                    let lastMessageObj = messages[messages.length - 1];
+                    if (hiddenChats.includes(partner)) continue; // Пропускаем скрытые чаты
 
-                    // Считаем непрочитанные сообщения (если мы не в этом чате прямо сейчас)
+                    let messages = Object.entries(allRooms[roomId]);
+                    if(messages.length === 0) continue;
+                    
+                    let [lastId, lastMessageObj] = messages[messages.length - 1];
+
+                    // ФИКС БАГА: Считаем только ВХОДЯЩИЕ сообщения от партнёра
                     let unreadCount = 0;
                     if (partner !== currentChat) {
-                        // Для простоты считаем все входящие сообщения в этой сессии
-                        // Чтобы сделать точный счетчик, можно проверять статус прочитано, 
-                        // но для базовой логики пока считаем новые входящие.
-                        unreadCount = messages.filter(m => m.sender === partner).length; 
+                        unreadCount = messages.filter(([id, m]) => m.sender === partner).length; 
                     }
 
-                    // Обновляем или добавляем чат на панель
                     updateChatUI(partner, lastMessageObj.text, unreadCount);
                 }
             }
@@ -480,12 +408,9 @@
         let existingItem = document.getElementById("chat-item-" + partner);
 
         if (!existingItem) {
-            activeChats[partner] = { unread: unreadCount };
-            
             let chatItem = document.createElement("div");
             chatItem.className = "chat-item";
             chatItem.id = "chat-item-" + partner;
-            chatItem.onclick = function() { switchChat(partner); };
             
             chatItem.innerHTML = `
                 <div class="chat-item-top">
@@ -495,13 +420,28 @@
                     <span class="chat-item-lastmsg" id="lastmsg-${partner}">${lastText}</span>
                     <span class="badge" id="badge-${partner}" style="display: ${unreadCount > 0 ? 'block' : 'none'}">${unreadCount}</span>
                 </div>
+                <span class="delete-chat-btn" id="del-chat-${partner}">&times;</span>
             `;
-            list.appendChild(chatItem);
-        } else {
-            // Обновляем текст последнего сообщения
-            document.getElementById("lastmsg-" + partner).innerText = lastText;
             
-            // Если чат не активен, обновляем счетчик
+            // Нажатие на сам чат
+            chatItem.onclick = (e) => {
+                if(e.target.className !== 'delete-chat-btn') switchChat(partner);
+            };
+            
+            list.appendChild(chatItem);
+
+            // Кнопка удаления чата (скрыть для себя)
+            document.getElementById(`del-chat-${partner}`).onclick = (e) => {
+                e.stopPropagation();
+                if(confirm(`Скрыть чат с ${partner}? Переписка останется в базе.`)) {
+                    hiddenChats.push(partner);
+                    localStorage.setItem("kirikgram_hidden_chats", JSON.stringify(hiddenChats));
+                    document.getElementById("chat-item-" + partner).remove();
+                    if(currentChat === partner) resetChatUI();
+                }
+            };
+        } else {
+            document.getElementById("lastmsg-" + partner).innerText = lastText;
             let badge = document.getElementById("badge-" + partner);
             if (partner !== currentChat && unreadCount > 0) {
                 badge.innerText = unreadCount;
@@ -512,11 +452,6 @@
         }
     }
 
-    function addChatToList(chatName) {
-        updateChatUI(chatName, "Нет сообщений", 0);
-    }
-
-    // ПЕРЕКЛЮЧЕНИЕ ЧАТА
     function switchChat(chatName) {
         if (currentRoomRef) { off(currentRoomRef); }
         
@@ -525,7 +460,6 @@
         document.getElementById("chat-view-active").style.display = "flex";
         document.getElementById("chat-header").innerText = "Чат: " + chatName;
         
-        // Убираем зеленый кружок прочитанного чата
         let badge = document.getElementById("badge-" + chatName);
         if (badge) badge.style.display = "none";
 
@@ -540,18 +474,81 @@
         currentRoomRef = ref(db, 'messages/' + roomId);
 
         onChildAdded(currentRoomRef, (snapshot) => {
-            let data = snapshot.val();
-            displayMessage(data.sender, data.text);
+            displayMessage(snapshot.key, snapshot.val());
+        });
+
+        onChildRemoved(currentRoomRef, (snapshot) => {
+            let el = document.getElementById("msg-" + snapshot.key);
+            if(el) el.remove();
         });
     }
 
-    function displayMessage(sender, text) {
+    function displayMessage(msgId, msgObj) {
         let area = document.getElementById("messages-area");
+        
+        // Если сообщение удалено локально текущим юзером
+        let deletedLocally = JSON.parse(localStorage.getItem(`deleted_msg_${msgId}`) || "false");
+        if (deletedLocally) return;
+
         let msgDiv = document.createElement("div");
-        msgDiv.className = sender === currentUser ? "message msg-outbound" : "message msg-inbound";
-        msgDiv.innerText = sender + ": " + text;
+        msgDiv.className = msgObj.sender === currentUser ? "message msg-outbound" : "message msg-inbound";
+        msgDiv.id = "msg-" + msgId;
+        msgDiv.innerText = msgObj.sender + ": " + msgObj.text;
+        
+        // Клик по сообщению (Опции удаления)
+        msgDiv.onclick = () => openMessageOptions(msgId, msgObj.sender);
+
         area.appendChild(msgDiv);
         area.scrollTop = area.scrollHeight;
+    }
+
+    // ОКНО УДАЛЕНИЯ СООБЩЕНИЙ
+    function openMessageOptions(msgId, sender) {
+        selectedMsgId = msgId;
+        let container = document.getElementById("msg-modal-actions");
+        container.innerHTML = "";
+
+        let isMe = sender === currentUser;
+        let isAdmin = currentUser === "KIRIK";
+
+        if (isMe || isAdmin) {
+            // Кнопка удаления у всех
+            let btnAll = document.createElement("button");
+            btnAll.className = "modal-btn btn-danger";
+            btnAll.innerText = isAdmin && !isMe ? "Удалить для всех (Админ)" : "Удалить для всех";
+            btnAll.onclick = deleteMessageForEveryone;
+            container.innerHTML += btnAll.outerHTML;
+        }
+
+        // Кнопка удаления только у себя
+        let btnSelf = document.createElement("button");
+        btnSelf.className = "modal-btn btn-primary";
+        btnSelf.innerText = "Удалить у себя";
+        btnSelf.onclick = deleteMessageForSelf;
+        container.appendChild(btnSelf);
+
+        // Кнопка отмены
+        let btnCancel = document.createElement("button");
+        btnCancel.className = "modal-btn btn-secondary";
+        btnCancel.innerText = "Отмена";
+        btnCancel.onclick = () => document.getElementById("msg-options-modal").style.display = "none";
+        container.appendChild(btnCancel);
+
+        document.getElementById("msg-options-modal").style.display = "flex";
+    }
+
+    function deleteMessageForEveryone() {
+        let roomId = currentUser < currentChat ? currentUser + "_" + currentChat : currentChat + "_" + currentUser;
+        remove(ref(db, `messages/${roomId}/${selectedMsgId}`)).then(() => {
+            document.getElementById("msg-options-modal").style.display = "none";
+        });
+    }
+
+    function deleteMessageForSelf() {
+        localStorage.setItem(`deleted_msg_${selectedMsgId}`, "true");
+        let el = document.getElementById("msg-" + selectedMsgId);
+        if(el) el.remove();
+        document.getElementById("msg-options-modal").style.display = "none";
     }
 
     function processSend() {
@@ -560,8 +557,7 @@
 
         if (text !== "" && currentChat !== "") {
             let roomId = currentUser < currentChat ? currentUser + "_" + currentChat : currentChat + "_" + currentUser;
-            const messagesRef = ref(db, 'messages/' + roomId);
-            push(messagesRef, {
+            push(ref(db, 'messages/' + roomId), {
                 sender: currentUser,
                 text: text
             });
@@ -569,17 +565,48 @@
         }
     }
 
+    // АДМИН ПАНЕЛЬ
+    document.getElementById("admin-panel-btn").onclick = () => {
+        let listContainer = document.getElementById("admin-users-list");
+        listContainer.innerHTML = "Загрузка...";
+        document.getElementById("admin-modal").style.display = "flex";
+
+        get(ref(db, 'users')).then((snapshot) => {
+            listContainer.innerHTML = "";
+            if(!snapshot.exists()) return;
+            
+            Object.keys(snapshot.val()).forEach(username => {
+                if(username === "KIRIK") return; // Самого админа удалить нельзя
+
+                let item = document.createElement("div");
+                item.className = "admin-user-item";
+                item.innerHTML = `
+                    <span>👤 <b>${username}</b></span>
+                    <button class="modal-btn btn-danger" style="padding: 4px 10px; font-size:12px;">Бан / Удалить</button>
+                `;
+                // Клик на удаление юзера админом
+                item.querySelector('button').onclick = () => {
+                    if(confirm(`Вы уверены, что хотите полностью УДАЛИТЬ аккаунт ${username}?`)) {
+                        remove(ref(db, 'users/' + username)).then(() => {
+                            item.remove();
+                        });
+                    }
+                };
+                listContainer.appendChild(item);
+            });
+        });
+    };
+
     function logout() {
         if (currentRoomRef) { off(currentRoomRef); }
         if (globalRoomsListener) { off(ref(db, 'messages')); }
-        
-        localStorage.removeItem("kirikgram_logged_user"); // Стираем авто-вход
+        localStorage.removeItem("kirikgram_logged_user");
         currentUser = "";
         document.getElementById("confirm-modal").style.display = "none";
         showScreen('register-screen');
     }
 
-    // Привязка кликов
+    // Привязка действий
     document.getElementById("reg-btn").onclick = handleRegister;
     document.getElementById("login-btn").onclick = handleLogin;
     document.getElementById("search-btn").onclick = handleSearch;
@@ -589,6 +616,12 @@
     document.getElementById("confirm-logout-no").onclick = () => document.getElementById("confirm-modal").style.display = "none";
     document.getElementById("to-login-link").onclick = () => showScreen('login-screen');
     document.getElementById("back-to-reg").onclick = () => showScreen('register-screen');
+    document.getElementById("close-admin-btn").onclick = () => document.getElementById("admin-modal").style.display = "none";
+
+    // Фикс обработчика кликов для динамических кнопок в модалке сообщений
+    document.getElementById("msg-options-modal").onclick = (e) => {
+        if(e.target.id === "msg-options-modal") document.getElementById("msg-options-modal").style.display = "none";
+    };
 
     document.getElementById("message-input").addEventListener("keypress", (e) => { if (e.key === "Enter") processSend(); });
     document.getElementById("search-input").addEventListener("keypress", (e) => { if (e.key === "Enter") handleSearch(); });
