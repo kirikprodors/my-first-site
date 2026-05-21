@@ -70,6 +70,7 @@
             box-shadow: 0 8px 24px rgba(0,0,0,0.6);
         }
 
+        /* ЛЕВАЯ ПАНЕЛЬ */
         #side-panel { 
             width: 250px; 
             background: #1e1e1e; 
@@ -82,11 +83,43 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px;
+            padding: 15px 20px;
             border-bottom: 1px solid #2f2f2f;
         }
         #brand-title { font-size: 20px; font-weight: bold; color: #5288c1; }
         #logout-btn { background: none; border: none; color: #ff5555; cursor: pointer; font-size: 14px; }
+
+        /* БЛОК ПОИСКА ДРУЗЕЙ */
+        #search-area {
+            padding: 10px;
+            border-bottom: 1px solid #2f2f2f;
+            display: flex;
+            gap: 5px;
+        }
+        #search-input {
+            flex: 1;
+            padding: 6px 10px;
+            background: #181818;
+            border: 1px solid #2f2f2f;
+            border-radius: 5px;
+            color: white;
+            outline: none;
+            font-size: 14px;
+        }
+        #search-btn {
+            background: #5288c1;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            padding: 0 10px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        #chats-list {
+            flex: 1;
+            overflow-y: auto;
+        }
 
         .chat-item { 
             padding: 15px 20px; 
@@ -97,6 +130,7 @@
         .chat-item:hover { background: #2c2c2c; }
         .chat-item.active { background: #2b5278; }
 
+        /* ПРАВАЯ ПАНЕЛЬ */
         #main-chat { 
             flex: 1; 
             display: flex; 
@@ -109,6 +143,7 @@
             background: #212121; 
             font-weight: bold; 
             border-bottom: 1px solid #2f2f2f;
+            display: none; /* Прячем заголовок чата, пока никого не выбрали */
         }
 
         #messages-area { 
@@ -118,6 +153,17 @@
             display: flex; 
             flex-direction: column;
             gap: 10px;
+            justify-content: center; /* По центру для начального текста */
+            align-items: center;
+        }
+
+        /* Текст-заглушка */
+        #no-history-text {
+            color: #7f8c8d;
+            font-size: 16px;
+            text-align: center;
+            max-width: 80%;
+            line-height: 1.4;
         }
 
         .message { 
@@ -126,13 +172,14 @@
             border-radius: 10px; 
             font-size: 15px; 
             word-wrap: break-word;
+            align-self: flex-start;
         }
         .msg-outbound { background: #2b5278; align-self: flex-end; }
 
         #input-panel { 
             padding: 15px; 
             background: #212121; 
-            display: flex; 
+            display: none; /* Скрыто, пока не выбран чат */
             gap: 10px; 
         }
 
@@ -156,7 +203,7 @@
             font-weight: bold; 
         }
 
-        /* ОКНО ПОДТВЕРЖДЕНИЯ ВЫХОДА */
+        /* МОДАЛКА ВЫХОДА */
         #confirm-modal {
             display: none;
             position: fixed;
@@ -164,6 +211,7 @@
             background: rgba(0,0,0,0.7);
             justify-content: center;
             align-items: center;
+            z-index: 10;
         }
         .modal-content {
             background: #212121;
@@ -205,13 +253,24 @@
             <div id="brand-title">KIRIKGRAM</div>
             <button id="logout-btn" onclick="openLogoutModal()">Выйти</button>
         </div>
-        <div class="chat-item active" onclick="switchChat('Брат Лёха')">Брат Лёха</div>
-        <div class="chat-item" onclick="switchChat('Группа по Roblox')">Группа по Roblox</div>
+        
+        <div id="search-area">
+            <input type="text" id="search-input" placeholder="Найти друга...">
+            <button id="search-btn" onclick="findUser()">Найти</button>
+        </div>
+        
+        <div id="chats-list"></div>
     </div>
 
     <div id="main-chat">
-        <div id="chat-header">Чат: Брат Лёха</div>
-        <div id="messages-area"></div>
+        <div id="chat-header">Чат: </div>
+        
+        <div id="messages-area">
+            <div id="no-history-text">
+                You don't have a chat history, please find your chat partners in the search.
+            </div>
+        </div>
+        
         <div id="input-panel">
             <input type="text" id="message-input" placeholder="Написать сообщение...">
             <button id="send-btn" onclick="processSend()">Отправить</button>
@@ -231,9 +290,9 @@
 
 <script>
     let currentUser = "";
-    let currentChat = "Брат Лёха";
+    let currentChat = "";
+    let activeChats = []; // Список чатов, которые сейчас отображаются слева
 
-    // Переключение экранов
     function showScreen(screenId) {
         document.getElementById("register-screen").style.display = "none";
         document.getElementById("login-screen").style.display = "none";
@@ -241,7 +300,6 @@
         
         document.getElementById(screenId).style.display = screenId === 'telegram-container' ? 'flex' : 'block';
         
-        // Очистка ошибок при переключении
         document.getElementById("reg-error").innerText = "";
         document.getElementById("login-error").innerText = "";
     }
@@ -257,17 +315,15 @@
             errorDiv.innerText = "Заполните все поля!";
             return;
         }
-
         if (pass !== confirm) {
             errorDiv.innerText = "Пароли не совпадают!";
             return;
         }
 
-        // Сохраняем пользователя в локальную память браузера
         localStorage.setItem("user_" + name, pass);
         currentUser = name;
         
-        // Сразу входим в систему
+        resetChatSystem();
         showScreen('telegram-container');
     }
 
@@ -285,30 +341,76 @@
         }
 
         currentUser = name;
+        resetChatSystem();
         showScreen('telegram-container');
     }
 
-    // Выход из аккаунта
-    function openLogoutModal() { document.getElementById("confirm-modal").style.display = "flex"; }
-    function closeLogoutModal() { document.getElementById("confirm-modal").style.display = "none"; }
-    
-    function logout() {
-        currentUser = "";
-        closeLogoutModal();
-        // Очищаем поля ввода окон авторизации
-        document.getElementById("reg-name").value = "";
-        document.getElementById("reg-pass").value = "";
-        document.getElementById("reg-confirm").value = "";
-        document.getElementById("login-name").value = "";
-        document.getElementById("login-pass").value = "";
-        showScreen('register-screen');
+    // Сброс окон при перезаходе
+    function resetChatSystem() {
+        currentChat = "";
+        activeChats = [];
+        document.getElementById("chats-list").innerHTML = "";
+        document.getElementById("messages-area").innerHTML = '<div id="no-history-text">You don't have a chat history, please find your chat partners in the search.</div>';
+        document.getElementById("messages-area").style.justifyContent = "center";
+        document.getElementById("chat-header").style.display = "none";
+        document.getElementById("input-panel").style.display = "none";
+        document.getElementById("search-input").value = "";
     }
 
-    // Смена чатов
+    // ПОИСК ПОЛЬЗОВАТЕЛЕЙ
+    function findUser() {
+        let searchName = document.getElementById("search-input").value.trim();
+        if (searchName === "") return;
+
+        // Проверяем, зарегистрирован ли вообще такой человек в localStorage
+        let userExists = localStorage.getItem("user_" + searchName);
+
+        if (!userExists) {
+            alert("Пользователь " + searchName + " не найден в KIRIKGRAM!");
+            return;
+        }
+
+        if (searchName === currentUser) {
+            alert("Вы не можете искать самого себя!");
+            return;
+        }
+
+        // Если такой чат уже добавлен слева, просто переключаемся на него
+        if (activeChats.includes(searchName)) {
+            switchChat(searchName);
+            return;
+        }
+
+        // Добавляем в массив активных чатов и рендерим в колонку
+        activeChats.push(searchName);
+        let chatsList = document.getElementById("chats-list");
+        
+        let newChatItem = document.createElement("div");
+        newChatItem.className = "chat-item";
+        newChatItem.innerText = searchName;
+        newChatItem.onclick = function() { switchChat(searchName); };
+        
+        chatsList.appendChild(newChatItem);
+        
+        // Сразу открываем этот чат
+        switchChat(searchName);
+    }
+
+    // Переключение чатов
     function switchChat(chatName) {
         currentChat = chatName;
-        document.getElementById("chat-header").innerText = "Чат: " + chatName;
         
+        // Показываем заголовок чата и поле ввода
+        document.getElementById("chat-header").style.display = "block";
+        document.getElementById("chat-header").innerText = "Чат: " + chatName;
+        document.getElementById("input-panel").style.display = "flex";
+        
+        // Перестраиваем область сообщений (убираем заглушку, включаем режим чата)
+        let area = document.getElementById("messages-area");
+        area.innerHTML = ""; 
+        area.style.justifyContent = "flex-end"; // Сообщения прижимаются к низу
+
+        // Подсвечиваем выбранный чат в списке слева
         let items = document.getElementsByClassName("chat-item");
         for (let item of items) {
             item.classList.remove("active");
@@ -316,7 +418,6 @@
                 item.classList.add("active");
             }
         }
-        document.getElementById("messages-area").innerHTML = ""; // Очищаем историю при переключении
     }
 
     // Отправка сообщений
@@ -327,7 +428,6 @@
         if (inputField.value.trim() !== "") {
             let msgDiv = document.createElement("div");
             msgDiv.className = "message msg-outbound";
-            // Добавляем имя того, кто сейчас залогинен
             msgDiv.innerText = currentUser + ": " + inputField.value;
             
             area.appendChild(msgDiv);
@@ -336,7 +436,21 @@
         }
     }
 
-    // Отправка по Enter
+    // Модалка выхода
+    function openLogoutModal() { document.getElementById("confirm-modal").style.display = "flex"; }
+    function closeLogoutModal() { document.getElementById("confirm-modal").style.display = "none"; }
+    
+    function logout() {
+        currentUser = "";
+        closeLogoutModal();
+        document.getElementById("reg-name").value = "";
+        document.getElementById("reg-pass").value = "";
+        document.getElementById("reg-confirm").value = "";
+        document.getElementById("login-name").value = "";
+        document.getElementById("login-pass").value = "";
+        showScreen('register-screen');
+    }
+
     document.getElementById("message-input").addEventListener("keypress", function(e) {
         if (e.key === "Enter") { processSend(); }
     });
