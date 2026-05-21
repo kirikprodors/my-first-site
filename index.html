@@ -1,44 +1,195 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <title>KIRIKGRAM</title>
     <style>
-        body { background-color: #1c1c1c; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
-        h1 { margin-top: 20px; color: #0088cc; }
-        #chat-window { width: 350px; height: 400px; background: #2b2b2b; border-radius: 15px; display: flex; flex-direction: column; overflow: hidden; margin-top: 10px; }
-        #messages { flex: 1; padding: 15px; overflow-y: auto; }
-        #input-area { display: flex; padding: 10px; background: #333; }
-        input { flex: 1; padding: 8px; border: none; border-radius: 5px; }
-        button { padding: 8px 15px; margin-left: 5px; background: #0088cc; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        .msg { background: #444; padding: 8px; margin-bottom: 8px; border-radius: 8px; font-size: 14px; }
+        /* Общие настройки страницы */
+        body { 
+            background-color: #181818; 
+            color: white; 
+            font-family: sans-serif; 
+            margin: 0; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+        }
+
+        /* Главный контейнер мессенджера */
+        #telegram-container { 
+            display: flex; 
+            width: 800px; 
+            height: 600px; 
+            background: #212121; 
+            border-radius: 12px; 
+            overflow: hidden; 
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+        }
+
+        /* ЛЕВАЯ ПАНЕЛЬ (Список чатов) */
+        #side-panel { 
+            width: 250px; 
+            background: #1e1e1e; 
+            border-right: 1px solid #2f2f2f; 
+            display: flex; 
+            flex-direction: column;
+        }
+
+        #brand-title { 
+            padding: 20px; 
+            font-size: 20px; 
+            font-weight: bold; 
+            color: #5288c1; 
+            border-bottom: 1px solid #2f2f2f;
+            text-align: center;
+        }
+
+        .chat-item { 
+            padding: 15px 20px; 
+            cursor: pointer; 
+            border-bottom: 1px solid #252525;
+            transition: background 0.2s;
+        }
+
+        .chat-item:hover { background: #2c2c2c; }
+        .chat-item.active { background: #2b5278; }
+
+        /* ПРАВАЯ ПАНЕЛЬ (Окно чата) */
+        #main-chat { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            background: #17212b; 
+        }
+
+        #chat-header { 
+            padding: 15px 20px; 
+            background: #212121; 
+            font-weight: bold; 
+            border-bottom: 1px solid #2f2f2f;
+        }
+
+        #messages-area { 
+            flex: 1; 
+            padding: 20px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* Стили для сообщений */
+        .message { 
+            max-width: 70%; 
+            padding: 10px 14px; 
+            border-radius: 10px; 
+            font-size: 15px; 
+            word-wrap: break-word;
+        }
+        .msg-inbound { background: #182533; align-self: flex-start; } /* Входящие */
+        .msg-outbound { background: #2b5278; align-self: flex-end; } /* Твои сообщения */
+
+        /* Зона ввода текста */
+        #input-panel { 
+            padding: 15px; 
+            background: #212121; 
+            display: flex; 
+            gap: 10px; 
+        }
+
+        #message-input { 
+            flex: 1; 
+            padding: 12px; 
+            background: #181818; 
+            border: 1px solid #2f2f2f; 
+            border-radius: 8px; 
+            color: white; 
+            outline: none;
+        }
+
+        #send-btn { 
+            padding: 0 20px; 
+            background: #5288c1; 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold; 
+        }
+        #send-btn:hover { background: #659bd6; }
     </style>
 </head>
 <body>
 
-    <h1>КИРИКГРАМ</h1>
+<div id="telegram-container">
+    
+    <div id="side-panel">
+        <div id="brand-title">KIRIKGRAM</div>
+        <div class="chat-item active" onclick="switchChat('Брат Лёха')">Брат Лёха</div>
+        <div class="chat-item" onclick="switchChat('Группа по Roblox')">Группа по Roblox</div>
+    </div>
 
-    <div id="chat-window">
-        <div id="messages"></div>
-        <div id="input-area">
-            <input type="text" id="msgInput" placeholder="Сообщение...">
-            <button onclick="sendMessage()">Send</button>
+    <div id="main-chat">
+        <div id="chat-header" id="current-chat-title">Чат: Брат Лёха</div>
+        
+        <div id="messages-area">
+            <div class="message msg-inbound">Привет! Тут пока тестовый режим :)</div>
+        </div>
+
+        <div id="input-panel">
+            <input type="text" id="message-input" placeholder="Написать сообщение...">
+            <button id="send-btn" onclick="processSend()">Отправить</button>
         </div>
     </div>
 
-    <script>
-        function sendMessage() {
-            let input = document.getElementById("msgInput");
-            let msgBox = document.getElementById("messages");
-            if (input.value.trim() !== "") {
-                let newMsg = document.createElement("div");
-                newMsg.className = "msg";
-                newMsg.innerText = "Кирилл: " + input.value;
-                msgBox.appendChild(newMsg);
-                input.value = "";
-                msgBox.scrollTop = msgBox.scrollHeight;
+</div>
+
+<script>
+    let currentChat = "Брат Лёха";
+
+    // Функция смены чата слева
+    function switchChat(chatName) {
+        currentChat = chatName;
+        document.getElementById("chat-header").innerText = "Чат: " + chatName;
+        
+        // Меняем активный визуальный стиль в списке
+        let items = document.getElementsByClassName("chat-item");
+        for (let item of items) {
+            item.classList.remove("active");
+            if (item.innerText === chatName) {
+                item.classList.add("active");
             }
         }
-    </script>
+        
+        // Очищаем окно сообщений при переключении (пока нет базы данных)
+        document.getElementById("messages-area").innerHTML = 
+            `<div class="message msg-inbound">Ты переключился на чат: ${chatName}</div>`;
+    }
+
+    // Функция отправки сообщений
+    function processSend() {
+        let inputField = document.getElementById("message-input");
+        let area = document.getElementById("messages-area");
+
+        if (inputField.value.trim() !== "") {
+            let msgDiv = document.createElement("div");
+            msgDiv.className = "message msg-outbound";
+            msgDiv.innerText = inputField.value;
+            
+            area.appendChild(msgDiv);
+            inputField.value = ""; // Очистка
+            area.scrollTop = area.scrollHeight; // Скролл вниз
+        }
+    }
+
+    // Слушаем кнопку Enter
+    document.getElementById("message-input").addEventListener("keypress", function(e) {
+        if (e.key === "Enter") {
+            processSend();
+        }
+    });
+</script>
+
 </body>
 </html>
