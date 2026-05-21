@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>KIRIKGRAM</title>
     <style>
-        /* Общие настройки страницы */
         body { 
             background-color: #181818; 
             color: white; 
@@ -16,9 +15,53 @@
             height: 100vh; 
         }
 
-        /* Главный контейнер мессенджера */
+        /* ОКНА АВТОРИЗАЦИИ / РЕГИСТРАЦИИ */
+        .auth-card {
+            background: #212121;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            width: 320px;
+            text-align: center;
+            display: none;
+        }
+        .auth-card h2 { color: #5288c1; margin-top: 0; }
+        .auth-card input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background: #181818;
+            border: 1px solid #2f2f2f;
+            border-radius: 6px;
+            color: white;
+            box-sizing: border-box;
+            outline: none;
+        }
+        .auth-btn {
+            width: 100%;
+            padding: 10px;
+            background: #5288c1;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .auth-btn:hover { background: #659bd6; }
+        .auth-link {
+            color: #5288c1;
+            margin-top: 15px;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-block;
+        }
+        .error-msg { color: #ff5555; font-size: 14px; margin-top: 5px; min-height: 18px; }
+        .back-arrow { text-align: left; cursor: pointer; color: #5288c1; font-size: 18px; margin-bottom: 10px; }
+
+        /* ИНТЕРФЕЙС ЧАТА */
         #telegram-container { 
-            display: flex; 
+            display: none; 
             width: 800px; 
             height: 600px; 
             background: #212121; 
@@ -27,7 +70,6 @@
             box-shadow: 0 8px 24px rgba(0,0,0,0.6);
         }
 
-        /* ЛЕВАЯ ПАНЕЛЬ (Список чатов) */
         #side-panel { 
             width: 250px; 
             background: #1e1e1e; 
@@ -36,14 +78,15 @@
             flex-direction: column;
         }
 
-        #brand-title { 
-            padding: 20px; 
-            font-size: 20px; 
-            font-weight: bold; 
-            color: #5288c1; 
+        #brand-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
             border-bottom: 1px solid #2f2f2f;
-            text-align: center;
         }
+        #brand-title { font-size: 20px; font-weight: bold; color: #5288c1; }
+        #logout-btn { background: none; border: none; color: #ff5555; cursor: pointer; font-size: 14px; }
 
         .chat-item { 
             padding: 15px 20px; 
@@ -51,11 +94,9 @@
             border-bottom: 1px solid #252525;
             transition: background 0.2s;
         }
-
         .chat-item:hover { background: #2c2c2c; }
         .chat-item.active { background: #2b5278; }
 
-        /* ПРАВАЯ ПАНЕЛЬ (Окно чата) */
         #main-chat { 
             flex: 1; 
             display: flex; 
@@ -79,7 +120,6 @@
             gap: 10px;
         }
 
-        /* Стили для сообщений */
         .message { 
             max-width: 70%; 
             padding: 10px 14px; 
@@ -87,10 +127,8 @@
             font-size: 15px; 
             word-wrap: break-word;
         }
-        .msg-inbound { background: #182533; align-self: flex-start; } /* Входящие */
-        .msg-outbound { background: #2b5278; align-self: flex-end; } /* Твои сообщения */
+        .msg-outbound { background: #2b5278; align-self: flex-end; }
 
-        /* Зона ввода текста */
         #input-panel { 
             padding: 15px; 
             background: #212121; 
@@ -117,43 +155,160 @@
             cursor: pointer; 
             font-weight: bold; 
         }
-        #send-btn:hover { background: #659bd6; }
+
+        /* ОКНО ПОДТВЕРЖДЕНИЯ ВЫХОДА */
+        #confirm-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #212121;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            width: 260px;
+        }
+        .modal-btns { display: flex; justify-content: space-around; margin-top: 15px; }
+        .modal-btn { padding: 8px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-yes { background: #ff5555; color: white; }
+        .btn-no { background: #5288c1; color: white; }
     </style>
 </head>
 <body>
 
+<div id="register-screen" class="auth-card" style="display: block;">
+    <h2>Welcome to KIRIKGRAM</h2>
+    <input type="text" id="reg-name" placeholder="Имя">
+    <input type="password" id="reg-pass" placeholder="Пароль">
+    <input type="password" id="reg-confirm" placeholder="Подтвердите пароль">
+    <div id="reg-error" class="error-msg"></div>
+    <button class="auth-btn" onclick="handleRegister()">Зарегистрироваться</button>
+    <div class="auth-link" onclick="showScreen('login-screen')">Already registered? Log in to KIRIKGRAM.</div>
+</div>
+
+<div id="login-screen" class="auth-card">
+    <div class="back-arrow" onclick="showScreen('register-screen')">← Назад</div>
+    <h2>Log in to KIRIKGRAM</h2>
+    <input type="text" id="login-name" placeholder="Имя">
+    <input type="password" id="login-pass" placeholder="Пароль">
+    <div id="login-error" class="error-msg"></div>
+    <button class="auth-btn" onclick="handleLogin()">Войти</button>
+</div>
+
 <div id="telegram-container">
-    
     <div id="side-panel">
-        <div id="brand-title">KIRIKGRAM</div>
+        <div id="brand-header">
+            <div id="brand-title">KIRIKGRAM</div>
+            <button id="logout-btn" onclick="openLogoutModal()">Выйти</button>
+        </div>
         <div class="chat-item active" onclick="switchChat('Брат Лёха')">Брат Лёха</div>
         <div class="chat-item" onclick="switchChat('Группа по Roblox')">Группа по Roblox</div>
     </div>
 
     <div id="main-chat">
-        <div id="chat-header" id="current-chat-title">Чат: Брат Лёха</div>
-        
-        <div id="messages-area">
-            <div class="message msg-inbound">Привет! Тут пока тестовый режим :)</div>
-        </div>
-
+        <div id="chat-header">Чат: Брат Лёха</div>
+        <div id="messages-area"></div>
         <div id="input-panel">
             <input type="text" id="message-input" placeholder="Написать сообщение...">
             <button id="send-btn" onclick="processSend()">Отправить</button>
         </div>
     </div>
+</div>
 
+<div id="confirm-modal">
+    <div class="modal-content">
+        <p style="margin-top:0;">You really want to leave?</p>
+        <div class="modal-btns">
+            <button class="modal-btn btn-yes" onclick="logout()">Yes</button>
+            <button class="modal-btn btn-no" onclick="closeLogoutModal()">No</button>
+        </div>
+    </div>
 </div>
 
 <script>
+    let currentUser = "";
     let currentChat = "Брат Лёха";
 
-    // Функция смены чата слева
+    // Переключение экранов
+    function showScreen(screenId) {
+        document.getElementById("register-screen").style.display = "none";
+        document.getElementById("login-screen").style.display = "none";
+        document.getElementById("telegram-container").style.display = "none";
+        
+        document.getElementById(screenId).style.display = screenId === 'telegram-container' ? 'flex' : 'block';
+        
+        // Очистка ошибок при переключении
+        document.getElementById("reg-error").innerText = "";
+        document.getElementById("login-error").innerText = "";
+    }
+
+    // Регистрация
+    function handleRegister() {
+        let name = document.getElementById("reg-name").value.trim();
+        let pass = document.getElementById("reg-pass").value;
+        let confirm = document.getElementById("reg-confirm").value;
+        let errorDiv = document.getElementById("reg-error");
+
+        if (!name || !pass || !confirm) {
+            errorDiv.innerText = "Заполните все поля!";
+            return;
+        }
+
+        if (pass !== confirm) {
+            errorDiv.innerText = "Пароли не совпадают!";
+            return;
+        }
+
+        // Сохраняем пользователя в локальную память браузера
+        localStorage.setItem("user_" + name, pass);
+        currentUser = name;
+        
+        // Сразу входим в систему
+        showScreen('telegram-container');
+    }
+
+    // Вход
+    function handleLogin() {
+        let name = document.getElementById("login-name").value.trim();
+        let pass = document.getElementById("login-pass").value;
+        let errorDiv = document.getElementById("login-error");
+
+        let savedPassword = localStorage.getItem("user_" + name);
+
+        if (!savedPassword || savedPassword !== pass) {
+            errorDiv.innerText = "Incorrect password!";
+            return;
+        }
+
+        currentUser = name;
+        showScreen('telegram-container');
+    }
+
+    // Выход из аккаунта
+    function openLogoutModal() { document.getElementById("confirm-modal").style.display = "flex"; }
+    function closeLogoutModal() { document.getElementById("confirm-modal").style.display = "none"; }
+    
+    function logout() {
+        currentUser = "";
+        closeLogoutModal();
+        // Очищаем поля ввода окон авторизации
+        document.getElementById("reg-name").value = "";
+        document.getElementById("reg-pass").value = "";
+        document.getElementById("reg-confirm").value = "";
+        document.getElementById("login-name").value = "";
+        document.getElementById("login-pass").value = "";
+        showScreen('register-screen');
+    }
+
+    // Смена чатов
     function switchChat(chatName) {
         currentChat = chatName;
         document.getElementById("chat-header").innerText = "Чат: " + chatName;
         
-        // Меняем активный визуальный стиль в списке
         let items = document.getElementsByClassName("chat-item");
         for (let item of items) {
             item.classList.remove("active");
@@ -161,13 +316,10 @@
                 item.classList.add("active");
             }
         }
-        
-        // Очищаем окно сообщений при переключении (пока нет базы данных)
-        document.getElementById("messages-area").innerHTML = 
-            `<div class="message msg-inbound">Ты переключился на чат: ${chatName}</div>`;
+        document.getElementById("messages-area").innerHTML = ""; // Очищаем историю при переключении
     }
 
-    // Функция отправки сообщений
+    // Отправка сообщений
     function processSend() {
         let inputField = document.getElementById("message-input");
         let area = document.getElementById("messages-area");
@@ -175,19 +327,18 @@
         if (inputField.value.trim() !== "") {
             let msgDiv = document.createElement("div");
             msgDiv.className = "message msg-outbound";
-            msgDiv.innerText = inputField.value;
+            // Добавляем имя того, кто сейчас залогинен
+            msgDiv.innerText = currentUser + ": " + inputField.value;
             
             area.appendChild(msgDiv);
-            inputField.value = ""; // Очистка
-            area.scrollTop = area.scrollHeight; // Скролл вниз
+            inputField.value = "";
+            area.scrollTop = area.scrollHeight;
         }
     }
 
-    // Слушаем кнопку Enter
+    // Отправка по Enter
     document.getElementById("message-input").addEventListener("keypress", function(e) {
-        if (e.key === "Enter") {
-            processSend();
-        }
+        if (e.key === "Enter") { processSend(); }
     });
 </script>
 
