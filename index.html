@@ -70,6 +70,7 @@
             border-right: 1px solid #2f2f2f; 
             display: flex; 
             flex-direction: column;
+            position: relative;
         }
 
         #brand-header {
@@ -83,9 +84,36 @@
         #admin-panel-btn { background: #a67c00; border: none; color: white; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; display: none; }
         #logout-btn { background: none; border: none; color: #ff5555; cursor: pointer; font-size: 14px; }
 
-        #search-box { padding: 10px 15px; border-bottom: 1px solid #2f2f2f; display: flex; gap: 5px; }
+        /* ПОИСК И УМНЫЕ ПОДСКАЗКИ */
+        #search-box { padding: 10px 15px; border-bottom: 1px solid #2f2f2f; display: flex; flex-direction: column; position: relative; gap: 5px; }
+        #search-input-wrapper { display: flex; gap: 5px; width: 100%; }
         #search-input { flex: 1; padding: 6px 10px; background: #181818; border: 1px solid #2f2f2f; border-radius: 5px; color: white; outline: none; font-size: 14px; }
         #search-btn { background: #5288c1; border: none; color: white; border-radius: 5px; cursor: pointer; padding: 0 10px; }
+        
+        #search-results-dropdown { 
+            display: none; 
+            position: absolute; 
+            top: 45px; 
+            left: 15px; 
+            right: 15px; 
+            background: #252525; 
+            border: 1px solid #383838; 
+            border-radius: 6px; 
+            max-height: 150px; 
+            overflow-y: auto; 
+            z-index: 5; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        .search-suggest-item { 
+            padding: 8px 12px; 
+            cursor: pointer; 
+            font-size: 14px; 
+            border-bottom: 1px solid #2f2f2f;
+            display: flex;
+            justify-content: space-between;
+        }
+        .search-suggest-item:last-child { border-bottom: none; }
+        .search-suggest-item:hover { background: #2b5278; }
 
         #chat-list { flex: 1; overflow-y: auto; }
         .no-chats-msg { padding: 20px; color: #aaaaaa; font-size: 14px; text-align: center; line-height: 1.4; }
@@ -173,7 +201,7 @@
     <h2>Вы были забанены!</h2>
     <div id="banned-details">
         <div><b>Администратор:</b> <span id="ban-admin-name">...</span></div>
-        <div><b>Срок бана:</b> <span id="ban-duration">...</span> дн.</div>
+        <div><b>Срок бана:</b> <span id="ban-duration">...</span></div>
         <div><b>Причина:</b> <span id="ban-reason">...</span></div>
     </div>
     <p style="font-size: 14px; color: #aaa;">Пожалуйста, создайте новый аккаунт, чтобы продолжить использование.</p>
@@ -208,10 +236,13 @@
         </div>
         
         <div id="search-box">
-            <input type="text" id="search-input" placeholder="Найти друга по имени...">
-            <button id="search-btn">Найти</button>
+            <div id="search-input-wrapper">
+                <input type="text" id="search-input" placeholder="Найти друга по имени..." autocomplete="off">
+                <button id="search-btn">Найти</button>
+            </div>
+            <div id="search-results-dropdown"></div>
+            <div id="search-error" class="error-msg" style="text-align:center; font-size:12px; margin: 0;"></div>
         </div>
-        <div id="search-error" class="error-msg" style="text-align:center; font-size:12px; padding: 0 10px;"></div>
 
         <div id="chat-list">
             <div class="no-chats-msg" id="empty-notice">
@@ -259,9 +290,9 @@
         <h3 style="margin-top:0; color:#5288c1;">Управление (Панель Администратора)</h3>
         
         <div style="background:#181818; padding: 10px; border-radius: 6px; margin-bottom: 10px;">
-            <span style="font-size: 13px; color:#aaa;">Настройки для бана/мута:</span>
+            <span style="font-size: 13px; color:#aaa;">Настройки (0 или пусто = Навсегда):</span>
             <input type="text" id="admin-reason-input" class="admin-input-small" placeholder="Причина (оскорбления, спам...)">
-            <input type="number" id="admin-time-input" class="admin-input-small" placeholder="Время (для бана в днях, для мута в минутах)" value="1">
+            <input type="number" id="admin-time-input" class="admin-input-small" placeholder="Время (Бан в днях, Мут в минутах)" value="1">
         </div>
 
         <div id="admin-users-list" style="max-height: 230px; overflow-y:auto; margin-bottom: 15px;">
@@ -295,6 +326,7 @@
     let userStatusListener = null;
     let selectedMsgId = null;
     let amIAdmin = false;
+    let allUsersCache = {}; // Кэш всех юзеров базы для мгновенного умного поиска
 
     window.addEventListener('DOMContentLoaded', () => {
         let savedUser = localStorage.getItem("kirikgram_logged_user");
@@ -340,7 +372,9 @@
                 if (globalRoomsListener) off(ref(db, 'messages'));
                 
                 document.getElementById("ban-admin-name").innerText = userData.bannedBy || "Admin";
-                document.getElementById("ban-duration").innerText = userData.banDays || "1";
+                
+                // Проверяем вечный ли бан
+                document.getElementById("ban-duration").innerText = userData.banDays === "perm" ? "НАВСЕГДА (Перманентный)" : (userData.banDays + " дн.");
                 document.getElementById("ban-reason").innerText = userData.banReason || "Нарушение правил";
                 showScreen("banned-screen");
                 return;
@@ -359,17 +393,26 @@
         let sendBtn = document.getElementById("send-btn");
         let muteText = document.getElementById("mute-status-text");
 
-        if (mutedUntil && mutedUntil > Date.now()) {
-            inputField.style.display = "none";
-            sendBtn.style.display = "none";
-            let timeLeft = Math.ceil((mutedUntil - Date.now()) / 60000);
-            muteText.innerText = `Вы замучены ещё на ${timeLeft} мин. Причина: ${reason || "Без причины"}`;
-            muteText.style.display = "block";
-        } else {
-            inputField.style.display = "block";
-            sendBtn.style.display = "block";
-            muteText.style.display = "none";
+        if (mutedUntil) {
+            if (mutedUntil === "perm") { // Логика вечного мута
+                inputField.style.display = "none";
+                sendBtn.style.display = "none";
+                muteText.innerText = `Вы замучены НАВСЕГДА. Причина: ${reason || "Без причины"}`;
+                muteText.style.display = "block";
+                return;
+            } else if (mutedUntil > Date.now()) {
+                inputField.style.display = "none";
+                sendBtn.style.display = "none";
+                let timeLeft = Math.ceil((mutedUntil - Date.now()) / 60000);
+                muteText.innerText = `Вы замучены ещё на ${timeLeft} мин. Причина: ${reason || "Без причины"}`;
+                muteText.style.display = "block";
+                return;
+            }
         }
+        
+        inputField.style.display = "block";
+        sendBtn.style.display = "block";
+        muteText.style.display = "none";
     }
 
     function handleRegister() {
@@ -429,6 +472,7 @@
         showScreen('telegram-container');
         resetChatUI();
         listenToIncomingChats();
+        loadAllUsersToCache(); // Загружаем базу для Умного поиска
     }
 
     function resetChatUI() {
@@ -438,28 +482,90 @@
         document.getElementById("chat-view-active").style.display = "none";
     }
 
-    function handleSearch() {
-        let searchInput = document.getElementById("search-input");
-        let searchName = searchInput.value.trim();
-        let errorDiv = document.getElementById("search-error");
-        errorDiv.innerText = "";
-
-        if (searchName === "" || searchName.toLowerCase() === currentUser.toLowerCase()) { return; }
-
-        get(ref(db, 'users/' + searchName)).then((snapshot) => {
-            if (snapshot.exists()) {
-                if (snapshot.val().banned) { errorDiv.innerText = "Этот пользователь забанен!"; return; }
-                hiddenChats = hiddenChats.filter(c => c !== searchName);
-                localStorage.setItem("kirikgram_hidden_chats", JSON.stringify(hiddenChats));
-                
-                updateChatUI(searchName, "Нет сообщений", 0);
-                switchChat(searchName);
-                searchInput.value = "";
-            } else {
-                errorDiv.innerText = "Пользователь не найден!";
+    // ПОЛУЧЕНИЕ БАЗЫ ЮЗЕРОВ ДЛЯ УМНОГО ЖИВОГО ПОИСКА
+    function loadAllUsersToCache() {
+        onValue(ref(db, 'users'), (snapshot) => {
+            if(snapshot.exists()) {
+                allUsersCache = snapshot.val();
             }
         });
     }
+
+    // УМНЫЙ ЖИВОЙ ПОИСК (РЕАГИРУЕТ НА КАЖДЫЙ СИМВОЛ, ИГНОРИРУЕТ РЕГИСТР)
+    document.getElementById("search-input").addEventListener("input", (e) => {
+        let query = e.target.value.trim().toLowerCase();
+        let dropdown = document.getElementById("search-results-dropdown");
+        dropdown.innerHTML = "";
+
+        if (query === "") {
+            dropdown.style.display = "none";
+            return;
+        }
+
+        let matches = [];
+        Object.keys(allUsersCache).forEach(username => {
+            // Исключаем себя и забаненных
+            if (username.toLowerCase() !== currentUser.toLowerCase() && !allUsersCache[username].banned) {
+                if (username.toLowerCase().includes(query)) {
+                    matches.push(username);
+                }
+            }
+        });
+
+        if (matches.length > 0) {
+            dropdown.style.display = "block";
+            matches.forEach(username => {
+                let div = document.createElement("div");
+                div.className = "search-suggest-item";
+                div.innerHTML = `<span>👤 ${username}</span> <span style="font-size:11px; color:#5288c1;">Открыть чат</span>`;
+                div.onclick = () => {
+                    selectUserFromSearch(username);
+                };
+                dropdown.appendChild(div);
+            });
+        } else {
+            dropdown.style.display = "block";
+            dropdown.innerHTML = `<div style="padding:10px; font-size:13px; color:#aaa; text-align:center;">Ничего не найдено</div>`;
+        }
+    });
+
+    function selectUserFromSearch(username) {
+        document.getElementById("search-results-dropdown").style.display = "none";
+        document.getElementById("search-input").value = "";
+        document.getElementById("search-error").innerText = "";
+
+        hiddenChats = hiddenChats.filter(c => c !== username);
+        localStorage.setItem("kirikgram_hidden_chats", JSON.stringify(hiddenChats));
+        
+        updateChatUI(username, "Нет сообщений", 0);
+        switchChat(username);
+    }
+
+    // ОБЫЧНАЯ КНОПКА «НАЙТИ» (НА ВСЯКИЙ СЛУЧАЙ)
+    function handleSearch() {
+        let searchName = document.getElementById("search-input").value.trim();
+        if(searchName === "") return;
+        
+        // Пытаемся найти совпадение без учета регистра в нашем кэше
+        let realName = Object.keys(allUsersCache).find(k => k.toLowerCase() === searchName.toLowerCase());
+
+        if (realName) {
+            if (allUsersCache[realName].banned) {
+                document.getElementById("search-error").innerText = "Этот пользователь забанен!";
+                return;
+            }
+            selectUserFromSearch(realName);
+        } else {
+            document.getElementById("search-error").innerText = "Пользователь не найден!";
+        }
+    }
+
+    // Закрытие выпадашки поиска при клике в любое другое место
+    document.addEventListener("click", (e) => {
+        if (!e.target.closest("#search-box")) {
+            document.getElementById("search-results-dropdown").style.display = "none";
+        }
+    });
 
     function listenToIncomingChats() {
         if (globalRoomsListener) { off(ref(db, 'messages')); }
@@ -468,10 +574,8 @@
             if (!snapshot.exists()) { resetChatUI(); return; }
             
             const allRooms = snapshot.val();
-            // Чистим старый список перед перерисовкой
             let list = document.getElementById("chat-list");
             list.innerHTML = "";
-
             let hasChats = false;
 
             for (let roomId in allRooms) {
@@ -567,7 +671,6 @@
         
         document.getElementById("messages-area").innerHTML = "";
 
-        // Строгий алфавитный порядок генерации Room ID: "111_KIRIK"
         let roomId = currentUser < currentChat ? currentUser + "_" + currentChat : currentChat + "_" + currentUser;
         currentRoomRef = ref(db, 'messages/' + roomId);
 
@@ -585,11 +688,10 @@
 
         let msgDiv = document.createElement("div");
         
-        // Исправлено: Сравниваем КТО отправил сообщение с ТЕМ, кто сейчас авторизован в браузере
         if (msgObj.sender === currentUser) {
-            msgDiv.className = "message msg-outbound"; // Улетает вправо (синее)
+            msgDiv.className = "message msg-outbound";
         } else {
-            msgDiv.className = "message msg-inbound"; // Улетает влево (серое)
+            msgDiv.className = "message msg-inbound";
         }
         
         msgDiv.id = "msg-" + msgId;
@@ -662,7 +764,7 @@
         }
     }
 
-    // ОТКРЫТИЕ АДМИН-ПАНЕЛИ
+    // ПАНЕЛЬ АДМИНИСТРАТОРА С ПОДДЕРЖКОЙ ВЕЧНОГО БАНА/МУТА
     document.getElementById("admin-panel-btn").onclick = () => {
         if(!amIAdmin) return;
         
@@ -681,15 +783,23 @@
                 item.className = "admin-user-item";
                 
                 let isBanned = uData.banned === true;
-                let isMuted = uData.mutedUntil && uData.mutedUntil > Date.now();
+                let isMuted = uData.mutedUntil === "perm" || (uData.mutedUntil && uData.mutedUntil > Date.now());
                 let isUserAdmin = uData.role === "admin";
+
+                // Читаемый статус
+                let statusText = "🟢 ОК";
+                if (isBanned) {
+                    statusText = uData.banDays === "perm" ? "🛑 ПЕРМ. БАН" : "🛑 БАН";
+                } else if (isMuted) {
+                    statusText = uData.mutedUntil === "perm" ? "🔇 ПЕРМ. МУТ" : "🔇 МУТ";
+                }
 
                 item.innerHTML = `
                     <div style="display:flex; flex-direction:column; max-width: 160px;">
                         <span>👤 <b>${username}</b></span>
                         <span style="font-size:11px; color:#aaa;">
                             Роль: ${isUserAdmin ? '⭐ Админ' : 'Пользователь'}<br>
-                            Статус: ${isBanned ? '🛑 БАН' : (isMuted ? '🔇 МУТ' : '🟢 ОК')}
+                            Статус: ${statusText}
                         </span>
                     </div>
                     <div class="admin-actions-group">
@@ -718,35 +828,43 @@
                     }
                 };
 
+                // БАН (ОБЫЧНЫЙ И ПЕРМАНЕНТНЫЙ)
                 document.getElementById(`ban-btn-${username}`).onclick = () => {
-                    let reason = document.getElementById("admin-reason-input").value.trim() || "Нарушение правил проекта";
-                    let days = parseInt(document.getElementById("admin-time-input").value) || 1;
+                    let reason = document.getElementById("admin-reason-input").value.trim() || "Нарушение правил";
+                    let val = parseInt(document.getElementById("admin-time-input").value);
 
                     if (isBanned) {
-                        update(ref(db, `users/${username}`), { banned: false }).then(() => document.getElementById("admin-panel-btn").click());
+                        update(ref(db, `users/${username}`), { banned: false, banDays: null }).then(() => document.getElementById("admin-panel-btn").click());
                     } else {
-                        if(confirm(`Забанить ${username} на ${days} дн.?`)) {
+                        let isPerm = isNaN(val) || val <= 0;
+                        let confirmText = isPerm ? `Забанить ${username} НАВСЕГДА (Перманентно)?` : `Забанить ${username} на ${val} дн.?`;
+                        
+                        if(confirm(confirmText)) {
                             update(ref(db, `users/${username}`), {
                                 banned: true,
                                 bannedBy: currentUser,
-                                banDays: days,
+                                banDays: isPerm ? "perm" : val,
                                 banReason: reason
                             }).then(() => document.getElementById("admin-panel-btn").click());
                         }
                     }
                 };
 
+                // МУТ (ОБЫЧНЫЙ И ПЕРМАНЕНТНЫЙ)
                 document.getElementById(`mute-btn-${username}`).onclick = () => {
                     let reason = document.getElementById("admin-reason-input").value.trim() || "Флуд / Спам";
-                    let minutes = parseInt(document.getElementById("admin-time-input").value) || 5;
+                    let val = parseInt(document.getElementById("admin-time-input").value);
 
                     if (isMuted) {
-                        update(ref(db, `users/${username}`), { mutedUntil: 0 }).then(() => document.getElementById("admin-panel-btn").click());
+                        update(ref(db, `users/${username}`), { mutedUntil: null, muteReason: null }).then(() => document.getElementById("admin-panel-btn").click());
                     } else {
-                        if(confirm(`Выдать мут ${username} на ${minutes} мин.?`)) {
-                            let mutedUntilTimestamp = Date.now() + (minutes * 60000);
+                        let isPerm = isNaN(val) || val <= 0;
+                        let confirmText = isPerm ? `Выдать перманентный мут ${username} (НАВСЕГДА)?` : `Выдать мут ${username} на ${val} мин.?`;
+                        
+                        if(confirm(confirmText)) {
+                            let muteValue = isPerm ? "perm" : (Date.now() + val * 60000);
                             update(ref(db, `users/${username}`), {
-                                mutedUntil: mutedUntilTimestamp,
+                                mutedUntil: muteValue,
                                 muteReason: reason
                             }).then(() => document.getElementById("admin-panel-btn").click());
                         }
