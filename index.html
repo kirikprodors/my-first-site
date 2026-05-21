@@ -230,11 +230,11 @@
     <input type="password" id="reg-confirm" placeholder="Подтвердите пароль">
     <div id="reg-error" class="error-msg"></div>
     <button class="auth-btn" id="reg-btn">Зарегистрироваться</button>
-    <div class="auth-link" id="link-to-login">Already registered? Log in to KIRIKGRAM.</div>
+    <div class="auth-link" id="to-login-link">Already registered? Log in to KIRIKGRAM.</div>
 </div>
 
 <div id="login-screen" class="auth-card">
-    <div class="back-arrow" id="link-to-reg">← Назад</div>
+    <div class="back-arrow" id="back-to-reg">← Назад</div>
     <h2>Log in to KIRIKGRAM</h2>
     <input type="text" id="login-name" placeholder="Имя">
     <input type="password" id="login-pass" placeholder="Пароль">
@@ -282,22 +282,20 @@
     <div class="modal-content">
         <p style="margin-top:0;">You really want to leave?</p>
         <div class="modal-btns">
-            <button class="modal-btn btn-yes" id="modal-yes">Yes</button>
-            <button class="modal-btn btn-no" id="modal-no">No</button>
+            <button class="modal-btn btn-yes" id="confirm-logout-yes">Yes</button>
+            <button class="modal-btn btn-no" id="confirm-logout-no">No</button>
         </div>
     </div>
 </div>
 
 <script type="module">
-    // Импортируем модули Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-    import { getDatabase, ref, set, get, child, push, onChildAdded, off } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+    import { getDatabase, ref, set, get, child, push, onChildAdded, off } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
 
-    // ТВОЙ ОФИЦИАЛЬНЫЙ КОНФИГ ИЗ СКРИНШОТА
+    // Твой личный скопированный паспорт Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyB86-UBtg14ECIK7rpUcYf3dwK4rBCcDiw",
         authDomain: "kirikgram.firebaseapp.com",
-        databaseURL: "https://kirikgram-default-rtdb.europe-west1.firebasedatabase.app", // Добавил ссылку на европейскую базу данных
         projectId: "kirikgram",
         storageBucket: "kirikgram.firebasestorage.app",
         messagingSenderId: "393237310761",
@@ -305,14 +303,14 @@
         measurementId: "G-J9YZ24CLJR"
     };
 
-    // Инициализация
+    // Старт работы с базой
     const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app);
+    const db = getDatabase(app);
 
     let currentUser = "";
     let currentChat = "";
     let activeChats = [];
-    let msgRef = null;
+    let currentRoomRef = null;
 
     // Переключение экранов
     function showScreen(screenId) {
@@ -320,52 +318,40 @@
         document.getElementById("login-screen").style.display = "none";
         document.getElementById("telegram-container").style.display = "none";
         
-        if (screenId === 'telegram-container') {
-            document.getElementById(screenId).style.display = 'flex';
-        } else {
-            document.getElementById(screenId).style.display = 'block';
-        }
+        document.getElementById(screenId).style.display = screenId === 'telegram-container' ? 'flex' : 'block';
     }
 
     // Регистрация в облаке
-    async function handleRegister() {
+    function handleRegister() {
         let name = document.getElementById("reg-name").value.trim();
         let pass = document.getElementById("reg-pass").value;
         let confirm = document.getElementById("reg-confirm").value;
         let errorDiv = document.getElementById("reg-error");
-        errorDiv.innerText = "";
 
         if (!name || !pass || !confirm) { errorDiv.innerText = "Заполните все поля!"; return; }
         if (pass !== confirm) { errorDiv.innerText = "Пароли не совпадают!"; return; }
 
-        try {
-            const dbRef = ref(database);
-            const snapshot = await get(child(dbRef, `users/${name}`));
-            
+        const userRef = ref(db, 'users/' + name);
+        get(userRef).then((snapshot) => {
             if (snapshot.exists()) {
                 errorDiv.innerText = "Это имя уже занято!";
             } else {
-                await set(ref(database, 'users/' + name), { password: pass });
-                currentUser = name;
-                resetChatSystem();
-                showScreen('telegram-container');
+                set(ref(db, 'users/' + name), { password: pass }).then(() => {
+                    currentUser = name;
+                    resetChatSystem();
+                    showScreen('telegram-container');
+                });
             }
-        } catch (e) {
-            errorDiv.innerText = "Ошибка сети! Проверьте правила Realtime Database.";
-        }
+        });
     }
 
-    // Вход по паролю из облака
-    async function handleLogin() {
+    // Вход через облако
+    function handleLogin() {
         let name = document.getElementById("login-name").value.trim();
         let pass = document.getElementById("login-pass").value;
         let errorDiv = document.getElementById("login-error");
-        errorDiv.innerText = "";
 
-        try {
-            const dbRef = ref(database);
-            const snapshot = await get(child(dbRef, `users/${name}`));
-
+        get(ref(db, 'users/' + name)).then((snapshot) => {
             if (snapshot.exists() && snapshot.val().password === pass) {
                 currentUser = name;
                 resetChatSystem();
@@ -373,9 +359,7 @@
             } else {
                 errorDiv.innerText = "Incorrect password!";
             }
-        } catch(e) {
-            errorDiv.innerText = "Ошибка входа!";
-        }
+        });
     }
 
     function resetChatSystem() {
@@ -389,29 +373,24 @@
         document.getElementById("chat-view-active").style.display = "none";
     }
 
-    // Поиск друга в глобальной сети Firebase
-    async function handleSearch() {
+    // Поиск по глобальной базе
+    function handleSearch() {
         let searchInput = document.getElementById("search-input");
         let searchName = searchInput.value.trim();
         let errorDiv = document.getElementById("search-error");
         errorDiv.innerText = "";
 
-        if (searchName === "") return;
-        if (searchName.toLowerCase() === currentUser.toLowerCase()) {
-            errorDiv.innerText = "Нельзя общаться с самим собой!";
-            return;
-        }
+        if (searchName === "" || searchName.toLowerCase() === currentUser.toLowerCase()) { return; }
 
-        const dbRef = ref(database);
-        const snapshot = await get(child(dbRef, `users/${searchName}`));
-
-        if (snapshot.exists()) {
-            addChatToList(searchName);
-            switchChat(searchName);
-            searchInput.value = "";
-        } else {
-            errorDiv.innerText = "Пользователь не найден!";
-        }
+        get(ref(db, 'users/' + searchName)).then((snapshot) => {
+            if (snapshot.exists()) {
+                addChatToList(searchName);
+                switchChat(searchName);
+                searchInput.value = "";
+            } else {
+                errorDiv.innerText = "Пользователь не найден!";
+            }
+        });
     }
 
     function addChatToList(chatName) {
@@ -430,10 +409,10 @@
         }
     }
 
-    // Переключение чата и запуск прослушивания сообщений в реальном времени
+    // Подключение к комнате общения
     function switchChat(chatName) {
-        if (msgRef) { off(msgRef); } // Выключаем старый чат
-
+        if (currentRoomRef) { off(currentRoomRef); } // Снимаем старую слежку за сообщениями
+        
         currentChat = chatName;
         document.getElementById("chat-view-placeholder").style.display = "none";
         document.getElementById("chat-view-active").style.display = "flex";
@@ -447,10 +426,10 @@
         document.getElementById("messages-area").innerHTML = "";
 
         let roomId = currentUser < currentChat ? currentUser + "_" + currentChat : currentChat + "_" + currentUser;
-        
-        // Слушаем новые сообщения из этой комнаты
-        msgRef = ref(database, 'messages/' + roomId);
-        onChildAdded(msgRef, (snapshot) => {
+        currentRoomRef = ref(db, 'messages/' + roomId);
+
+        // Включаем LIVE-прослушку новых сообщений из интернета
+        onChildAdded(currentRoomRef, (snapshot) => {
             let data = snapshot.val();
             displayMessage(data.sender, data.text);
         });
@@ -465,15 +444,15 @@
         area.scrollTop = area.scrollHeight;
     }
 
-    // Отправка в облако
+    // Закидываем сообщение в интернет-облако
     function processSend() {
         let inputField = document.getElementById("message-input");
         let text = inputField.value.trim();
 
         if (text !== "" && currentChat !== "") {
             let roomId = currentUser < currentChat ? currentUser + "_" + currentChat : currentChat + "_" + currentUser;
-            const roomRef = ref(database, 'messages/' + roomId);
-            push(roomRef, {
+            const messagesRef = ref(db, 'messages/' + roomId);
+            push(messagesRef, {
                 sender: currentUser,
                 text: text
             });
@@ -481,31 +460,24 @@
         }
     }
 
-    // Логика модалки выхода
     function logout() {
-        if (msgRef) { off(msgRef); }
+        if (currentRoomRef) { off(currentRoomRef); }
         currentUser = "";
         document.getElementById("confirm-modal").style.display = "none";
-        document.getElementById("reg-name").value = "";
-        document.getElementById("reg-pass").value = "";
-        document.getElementById("reg-confirm").value = "";
         showScreen('register-screen');
     }
 
-    // Привязка событий к кнопкам
+    // Привязка кликов к кнопкам (из-за правил модулей скрипта)
     document.getElementById("reg-btn").onclick = handleRegister;
     document.getElementById("login-btn").onclick = handleLogin;
     document.getElementById("search-btn").onclick = handleSearch;
     document.getElementById("send-btn").onclick = processSend;
-    
-    document.getElementById("link-to-login").onclick = () => showScreen('login-screen');
-    document.getElementById("link-to-reg").onclick = () => showScreen('register-screen');
-    
     document.getElementById("logout-btn").onclick = () => document.getElementById("confirm-modal").style.display = "flex";
-    document.getElementById("modal-no").onclick = () => document.getElementById("confirm-modal").style.display = "none";
-    document.getElementById("modal-yes").onclick = logout;
+    document.getElementById("confirm-logout-yes").onclick = logout;
+    document.getElementById("confirm-logout-no").onclick = () => document.getElementById("confirm-modal").style.display = "none";
+    document.getElementById("to-login-link").onclick = () => showScreen('login-screen');
+    document.getElementById("back-to-reg").onclick = () => showScreen('register-screen');
 
-    // Слушатели клавиши Enter
     document.getElementById("message-input").addEventListener("keypress", (e) => { if (e.key === "Enter") processSend(); });
     document.getElementById("search-input").addEventListener("keypress", (e) => { if (e.key === "Enter") handleSearch(); });
 </script>
