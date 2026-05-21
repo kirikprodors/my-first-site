@@ -259,7 +259,7 @@
             <input type="text" id="search-input" placeholder="Найти друга по имени...">
             <button id="search-btn" onclick="handleSearch()">Найти</button>
         </div>
-        <div id="search-error" class="error-msg" style="text-align:center; font-size:12px;"></div>
+        <div id="search-error" class="error-msg" style="text-align:center; font-size:12px; padding: 0 10px;"></div>
 
         <div id="chat-list">
             <div class="no-chats-msg" id="empty-notice">
@@ -297,7 +297,7 @@
 <script>
     let currentUser = "";
     let currentChat = "";
-    let activeChats = []; // Список открытых чатов
+    let activeChats = [];
 
     function showScreen(screenId) {
         document.getElementById("register-screen").style.display = "none";
@@ -341,7 +341,7 @@
 
         let savedPassword = localStorage.getItem("user_" + name);
 
-        if (!savedPassword || savedPassword !== pass) {
+        if (savedPassword === null || savedPassword !== pass) {
             errorDiv.innerText = "Incorrect password!";
             return;
         }
@@ -351,7 +351,6 @@
         showScreen('telegram-container');
     }
 
-    // Сброс чат-системы при входе нового юзера
     function resetChatSystem() {
         activeChats = [];
         currentChat = "";
@@ -364,7 +363,7 @@
         document.getElementById("search-input").value = "";
     }
 
-    // Поиск пользователей
+    // Поиск пользователей (Фикс логики)
     function handleSearch() {
         let searchInput = document.getElementById("search-input");
         let searchName = searchInput.value.trim();
@@ -374,24 +373,21 @@
 
         if (searchName === "") return;
         
-        if (searchName === currentUser) {
+        if (searchName.toLowerCase() === currentUser.toLowerCase()) {
             errorDiv.innerText = "Нельзя создать чат с самим собой!";
             return;
         }
 
-        // Проверяем, существует ли такой аккаунт в базе localStorage
-        let targetUser = localStorage.getItem("user_" + searchName);
+        // Проверяем точное совпадение ключа в localStorage
+        let savedPassword = localStorage.getItem("user_" + searchName);
 
-        if (targetUser) {
-            // Если аккаунт найден, создаем чат (если его еще нет в списке)
+        if (savedPassword !== null) {
             if (!activeChats.includes(searchName)) {
                 activeChats.push(searchName);
                 
-                // Удаляем надпись "You don't have a chat history..." если она есть
                 let notice = document.getElementById("empty-notice");
                 if (notice) notice.remove();
                 
-                // Добавляем новый элемент чата в список
                 let list = document.getElementById("chat-list");
                 let chatItem = document.createElement("div");
                 chatItem.className = "chat-item";
@@ -401,7 +397,6 @@
                 list.appendChild(chatItem);
             }
             
-            // Сразу переключаемся на этот чат
             switchChat(searchName);
             searchInput.value = "";
         } else {
@@ -409,28 +404,21 @@
         }
     }
 
-    // Переключение чатов
     function switchChat(chatName) {
         currentChat = chatName;
-        
-        // Показываем окно чата, скрываем заглушку
         document.getElementById("chat-view-placeholder").style.display = "none";
         document.getElementById("chat-view-active").style.display = "flex";
-        
         document.getElementById("chat-header").innerText = "Чат: " + chatName;
         
-        // Визуальное выделение активного чата
         let items = document.getElementsByClassName("chat-item");
-        for (let item of items) {
-            item.classList.remove("active");
-        }
+        for (let item of items) { item.classList.remove("active"); }
+        
         let activeItem = document.getElementById("chat-item-" + chatName);
         if (activeItem) activeItem.classList.add("active");
         
-        document.getElementById("messages-area").innerHTML = ""; // Очистка экрана сообщений
+        document.getElementById("messages-area").innerHTML = "";
     }
 
-    // Отправка сообщений
     function processSend() {
         let inputField = document.getElementById("message-input");
         let area = document.getElementById("messages-area");
@@ -446,7 +434,6 @@
         }
     }
 
-    // Выход из аккаунта
     function openLogoutModal() { document.getElementById("confirm-modal").style.display = "flex"; }
     function closeLogoutModal() { document.getElementById("confirm-modal").style.display = "none"; }
     
@@ -461,11 +448,9 @@
         showScreen('register-screen');
     }
 
-    // Слушатели кнопок Enter
     document.getElementById("message-input").addEventListener("keypress", function(e) {
         if (e.key === "Enter") { processSend(); }
     });
-    
     document.getElementById("search-input").addEventListener("keypress", function(e) {
         if (e.key === "Enter") { handleSearch(); }
     });
